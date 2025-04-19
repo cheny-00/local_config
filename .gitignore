@@ -1,0 +1,10 @@
+.DS_Store
+*.ipynb
+*.csv
+.idea/
+.ipynb*/
+*.log
+data/
+data
+.vscode/
+__pycache__/
