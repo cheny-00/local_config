@@ -228,6 +228,10 @@ function install_caddy() {
 # 安装eza
 function install_eza() {
     print_info "正在安装eza..."
+    if command -v eza &>/dev/null; then
+        print_warning "eza已安装"
+        return
+    fi
     apt install -y gpg
     mkdir -p /etc/apt/keyrings
     wget -qO- https://raw.githubusercontent.com/eza-community/eza/main/deb.asc | gpg --dearmor -o /etc/apt/keyrings/gierens.gpg
@@ -268,14 +272,13 @@ function install_yazi() {
 
 function install_fzf() {
     print_info "正在安装 fzf..."
-    
     if [ "$USERNAME" = "root" ]; then
         local install_dir="/root/.fzf"  
     else
         local install_dir="/home/$USERNAME/.fzf"
     fi
 
-    if ! command -v fzf &>/dev/null; then
+    if ! command -v $install_dir/bin/fzf &>/dev/null; then
         git clone --depth 1 https://github.com/junegunn/fzf.git "$install_dir"
         "$install_dir/install" --all
         print_success "fzf 安装完成"
@@ -285,25 +288,40 @@ function install_fzf() {
     sleep 1
 }
 
-function install_nvim() {
-    print_info "正在安装 Neovim..."
+install_nvim() {
+  set -euo pipefail
 
-    if ! command -v nvim &>/dev/null; then
-        wget -O nvim.tar.gz https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz
-        mkdir -p nvim-extract
-        tar -xzf nvim.tar.gz -C nvim-extract --strip-components=1
+  # 依赖检查
+  for cmd in wget tar install; do
+    command -v $cmd &>/dev/null || { echo >&2 "$cmd 未安装，请先安装它。"; return 1; }
+  done
 
-        # 移動可執行檔到 /usr/local/bin
-        install -Dm755 nvim-extract/bin/nvim /usr/local/bin/nvim
+  # 权限检查
+  if [[ $EUID -ne 0 ]]; then
+    echo "请使用 root 或 sudo 运行此脚本。"
+    return 1
+  fi
 
-        # 清理
-        rm -rf nvim.tar.gz nvim-extract
+  echo "🔄 正在安装 Neovim..."
 
-        print_success "Neovim 安装完成，所有用户都可以使用 'nvim'"
-    else
-        print_warning "Neovim 已安装"
-    fi
-    sleep 1
+  if command -v nvim &>/dev/null; then
+    echo "⚠️ Neovim 已安装，跳过。"
+    return 0
+  fi
+
+  # 下载并解压
+  wget -O nvim.tar.gz \
+    https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz
+  mkdir -p nvim-extract
+  tar -xzf nvim.tar.gz -C nvim-extract --strip-components=1
+
+  # 安装：一次性把 bin/ lib/ share/ 全部复制到 /usr/local
+  cp -r nvim-extract/* /usr/local/
+
+  # 清理
+  rm -rf nvim.tar.gz nvim-extract
+
+  echo "✅ Neovim 安装完成，所有用户可直接使用 ‘nvim’"
 }
 
 function install_lazyvim() {
