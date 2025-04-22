@@ -17,6 +17,8 @@ export PATH="$HOME/.local/bin:$PATH"
 export TERM=xterm-256color
 #export TERM=screen-256color
 
+source $HOME/.zsh/common_alias.zsh
+
 # ------------------ 初始化  -------------------
 # eval "$(starship init zsh)"
 # eval "$(zoxide init zsh)"

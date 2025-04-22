@@ -158,7 +158,7 @@ function install_basic_tools() {
 # 安装常用工具
 function install_common_tools() {
     print_info "正在安装常用工具..."
-    apt install -y btop zsh sudo build-essential cargo fastfetch
+    apt install -y btop zsh sudo build-essential fastfetch
     print_success "常用工具安装完成"
 }
 
@@ -299,10 +299,32 @@ function install_lazyvim() {
     print_success "LazyVim 配置安装完成，路径：/etc/nvim"
 }
 
+validate_url_format() {
+    local url=$1
+    # 使用正则表达式匹配URL格式
+    # 支持 http:// 或 https:// 开头，后面跟域名和可选的路径
+    local regex='^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$'
+    
+    if [[ $url =~ $regex ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 function install_serverstatus_client() {
     print_info "正在安装 ServerStatus Rust 客户端..."
 
-    read -p "请输入 ServerStatus 服务端地址（如 http://example.com:8080）: " ss_client_url
+    while true; do
+        read -p "请输入 ServerStatus 服务端地址（如 http://example.com:8080）: " ss_client_url
+        if validate_url_format "$ss_client_url"; then
+            break
+        else
+            print_error "无效的 URL 格式，重新输入"
+            continue
+        fi
+    done
+    
     read -p "请输入上报用户名: " ss_client_u
     read -p "请输入上报密码: " ss_client_p
 
@@ -351,6 +373,26 @@ function install_serverstatus_client() {
 function setup_fail2ban() {
     print_info "正在安装 fail2ban..."
     apt install -y fail2ban
+    wget -O /etc/fail2ban/jail.local https://raw.githubusercontent.com/cheny-00/local_config/refs/heads/main/fail2ban/jail.local
+    discord_webhook_url=""
+    while [ -z "$discord_webhook_url" ]; do
+        read -p "请输入discord webhook url: " discord_webhook_url
+        if [ -z "$discord_webhook_url" ]; then
+            print_error "discord webhook url不能为空"
+        fi
+    done
+    hostname=$(hostname)
+    read -p "请输入服务器名称: " hostname
+    # 如果用户没有输入hostname（即hostname为空字符串），则使用系统的hostname作为默认值
+    if [ -z "$hostname" ]; then
+        hostname=$(hostname)
+    fi
+    
+    wget -O /etc/fail2ban/action.d/discord.conf https://raw.githubusercontent.com/cheny-00/local_config/refs/heads/main/fail2ban/action.d/discord.conf
+    sed -i "s|webhook =.*|webhook = \"${discord_webhook_url}\"|" /etc/fail2ban/action.d/discord.conf
+    sed -i "s|hostname =.*|hostname = ${hostname}|" /etc/fail2ban/action.d/discord.conf
+    systemctl enable fail2ban
+    systemctl start fail2ban
     print_success "fail2ban 安装完成"
 
 }
@@ -363,34 +405,50 @@ function setup_zsh() {
         print_success "zsh 安装完成"
     fi
     
-
     # 为用户安装 starship
     if ! sudo -u "$USERNAME" command -v starship &>/dev/null; then
         print_info "为 $USERNAME 安装 starship..."
-        sudo -u "$USERNAME" bash -c 'curl -sS https://starship.rs/install.sh | bash -s -- -y'
+        sudo -u "$USERNAME" bash -c 'curl https://sh.rustup.rs -sSf | sh -s -- -y'
+        # 修正这行，使用双引号允许变量替换
+        echo "export PATH=\"/home/$USERNAME/.cargo/bin:\$PATH\"" >> /home/$USERNAME/.zshrc
+        sudo -u "$USERNAME" bash -c 'curl -sS https://starship.rs/install.sh | sh -s -- -y'
         print_success "starship 安装完成"
     fi
-
+    
     # 为用户安装 zoxide
     if ! sudo -u "$USERNAME" command -v zoxide &>/dev/null; then
         print_info "为 $USERNAME 安装 zoxide..."
         sudo -u "$USERNAME" bash -c 'curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash'
         print_success "zoxide 安装完成"
     fi
-
+    
+    # 确保.zsh目录存在
+    if [ ! -d "/home/$USERNAME/" ]; then
+        mkdir -p "/home/$USERNAME/"
+        chown "$USERNAME:$USERNAME" "/home/$USERNAME/"
+    fi
+    
     # 添加 PATH、初始化代码 到该用户的 .zshrc
+    wget -O "/home/$USERNAME/.zshrc" https://raw.githubusercontent.com/cheny-00/local_config/refs/heads/main/.zshrc
+    wget -O "/home/$USERNAME/.common_alias.zsh" https://raw.githubusercontent.com/cheny-00/local_config/refs/heads/main/.zsh/common_alias.zsh
+    chown "$USERNAME:$USERNAME" "/home/$USERNAME/.zshrc"
+    chown "$USERNAME:$USERNAME" "/home/$USERNAME/.common_alias.zsh"
+    
     local zshrc_path="/home/$USERNAME/.zshrc"
     [ "$USERNAME" = "root" ] && zshrc_path="/root/.zshrc"
-
+    
     if ! grep -q 'starship init' "$zshrc_path" 2>/dev/null; then
         echo 'export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"' >> "$zshrc_path"
         echo 'eval "$(starship init zsh)"' >> "$zshrc_path"
     fi
-
+    
     if ! grep -q 'zoxide init' "$zshrc_path" 2>/dev/null; then
         echo 'eval "$(zoxide init zsh)"' >> "$zshrc_path"
     fi
-
+    
+    # 设置默认shell为zsh
+    chsh -s $(which zsh) "$USERNAME"
+    
     print_success "$USERNAME 的 zsh 配置完成 ✅"
 }
 
@@ -414,6 +472,8 @@ show_menu() {
     echo "9) 安装 Neovim"
     echo "10) 安装 LazyVim"
     echo "11) 安装 ServerStatus 客户端"
+    echo "12) 安装 starship"
+    echo "13) 安装 zoxide"
     echo "a) 安装全部"
     echo "b) 安装 zsh 配置"
     echo "c) 安装 fail2ban"
@@ -430,10 +490,12 @@ function install_all() {
     install_bbr
     install_caddy
     install_eza
-    install_fzf
     install_yazi
+    install_fzf
     install_nvim
     install_lazyvim
+    install_starship
+    install_zoxide
     install_serverstatus_client
 }
 # 执行选中的功能
@@ -445,12 +507,13 @@ execute_function() {
         4) install_bbr ;;
         5) install_caddy ;;
         6) install_eza ;;
-        7) install_yazi ;;
-        8) install_nvim ;;
-        9) install_lazyvim ;;
-        10) install_serverstatus_client ;;
-        11) install_starship ;;
-        12) install_zoxide ;;
+        7) install_fzf ;;
+        8) install_yazi ;;
+        9) install_nvim ;;
+        10) install_lazyvim ;;
+        11) install_serverstatus_client ;;
+        12) install_starship ;;
+        13) install_zoxide ;;
         a) install_all ;;
         b) setup_fail2ban ;;
         *) print_warning "无效选项: $1" ;;
