@@ -245,7 +245,7 @@ function install_yazi() {
         print_info "正在安装 yazi..."
 
         # 下載並解壓
-        wget -O yazi.zip https://github.com/sxyazi/yazi/releases/download/nightly/yazi-x86_64-unknown-linux-gnu.zip
+        wget -O yazi.zip https://github.com/sxyazi/yazi/releases/download/nightly/yazi-x86_64-unknown-linux-musl.zip
         unzip -o yazi.zip -d yazi_bin
 
         # 安裝執行檔
@@ -268,10 +268,16 @@ function install_yazi() {
 
 function install_fzf() {
     print_info "正在安装 fzf..."
+    
+    if [ "$USERNAME" = "root" ]; then
+        local install_dir="/root/.fzf"  
+    else
+        local install_dir="/home/$USERNAME/.fzf"
+    fi
 
     if ! command -v fzf &>/dev/null; then
-        git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
-        ~/.fzf/install --all
+        git clone --depth 1 https://github.com/junegunn/fzf.git "$install_dir"
+        "$install_dir/install" --all
         print_success "fzf 安装完成"
     else
         print_warning "fzf 已安装"
@@ -302,9 +308,17 @@ function install_nvim() {
 
 function install_lazyvim() {
     print_info "正在安装 LazyVim..."
-
-    git clone https://github.com/LazyVim/starter /etc/nvim
-    rm -rf /etc/nvim/.git
+    if [ "$USERNAME" = "root" ]; then
+        mkdir -p /root/.config/
+        git clone https://github.com/LazyVim/starter /root/.config/nvim
+        rm -rf /root/.config/nvim/.git
+    else
+        mkdir -p /home/$USERNAME/.config/
+        chown -R $USERNAME:$USERNAME /home/$USERNAME/.config/
+        git clone https://github.com/LazyVim/starter /home/$USERNAME/.config/nvim
+        rm -rf /home/$USERNAME/.config/nvim/.git
+        chown -R $USERNAME:$USERNAME /home/$USERNAME/.config/nvim
+    fi
 
     print_success "LazyVim 配置安装完成，路径：/etc/nvim"
     sleep 1
@@ -444,6 +458,8 @@ function setup_zsh() {
     wget -O "/home/$USERNAME/.common_alias.zsh" https://raw.githubusercontent.com/cheny-00/local_config/refs/heads/main/.zsh/common_alias.zsh
     chown "$USERNAME:$USERNAME" "/home/$USERNAME/.zshrc"
     chown "$USERNAME:$USERNAME" "/home/$USERNAME/.common_alias.zsh"
+    mkdir -p "/home/$USERNAME/.cache/zinit/completions"
+    chown -R "$USERNAME:$USERNAME" "/home/$USERNAME/.cache/"
     
     local zshrc_path="/home/$USERNAME/.zshrc"
     [ "$USERNAME" = "root" ] && zshrc_path="/root/.zshrc"
@@ -540,6 +556,7 @@ show_tools_menu() {
     echo "12) 安装zoxide"
     echo "a) 安装全部工具"
     echo "b) 返回上级菜单"
+    echo "c) 安装tssh"
     echo "0) 退出"
     echo
     echo "======================================"
@@ -632,6 +649,7 @@ process_menu_choice() {
                 12) install_zoxide ;;
                 a) install_all_tools ;;
                 b) CURRENT_MENU="main" ;;
+                c) install_tssh ;;
                 0) 
                     echo -e "\n${GREEN}感谢使用，再见！${NC}"
                     exit 0 
