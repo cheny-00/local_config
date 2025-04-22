@@ -398,7 +398,7 @@ validate_url_format() {
 
 function install_serverstatus_client() {
     print_info "正在安装 ServerStatus Rust 客户端..."
-
+    ss_client_url="https://status.chy.moe"
     while true; do
         read -p "请输入 ServerStatus 服务端地址（如 http://example.com:8080）: " ss_client_url
         if validate_url_format "$ss_client_url"; then
