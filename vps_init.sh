@@ -473,7 +473,7 @@ function setup_zsh() {
     
     # 添加 PATH、初始化代码 到该用户的 .zshrc
     wget -O "/home/$USERNAME/.zshrc" https://raw.githubusercontent.com/cheny-00/local_config/refs/heads/main/.zsh/.zshrc
-    wget -O "/home/$USERNAME/.common_alias.zsh" https://raw.githubusercontent.com/cheny-00/local_config/refs/heads/main/.zsh/common_alias.zsh
+    wget -O "/home/$USERNAME/.common_alias.zsh" https://raw.githubusercontent.com/cheny-00/local_config/refs/heads/main/.zsh/.common_alias.zsh
     chown "$USERNAME:$USERNAME" "/home/$USERNAME/.zshrc"
     chown "$USERNAME:$USERNAME" "/home/$USERNAME/.common_alias.zsh"
     mkdir -p "/home/$USERNAME/.cache/zinit/completions"
@@ -567,14 +567,14 @@ show_tools_menu() {
     echo "5) 安装eza"
     echo "6) 安装fzf"
     echo "7) 安装yazi"
-    echo "8) 安装Neovim"
-    echo "9) 安装LazyVim"
     echo "10) 安装ServerStatus客户端"
     echo "11) 安装starship"
     echo "12) 安装zoxide"
     echo "a) 安装全部工具"
     echo "b) 返回上级菜单"
     echo "c) 安装tssh"
+    echo "d) 安装neovim"
+    echo "e) 安装lazyvim"
     echo "0) 退出"
     echo
     echo "======================================"
@@ -622,8 +622,6 @@ function install_all_tools() {
     install_eza
     install_fzf
     install_yazi
-    install_nvim
-    install_lazyvim
     install_serverstatus_client
     install_starship
     install_zoxide
@@ -660,14 +658,14 @@ process_menu_choice() {
                 5) install_eza ;;
                 6) install_fzf ;;
                 7) install_yazi ;;
-                8) install_nvim ;;
-                9) install_lazyvim ;;
                 10) install_serverstatus_client ;;
                 11) install_starship ;;
                 12) install_zoxide ;;
                 a) install_all_tools ;;
                 b) CURRENT_MENU="main" ;;
                 c) install_tssh ;;
+                d) install_neovim ;;
+                e) install_lazyvim ;;
                 0) 
                     echo -e "\n${GREEN}感谢使用，再见！${NC}"
                     exit 0 
