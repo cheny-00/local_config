@@ -466,6 +466,28 @@ function setup_zsh() {
     sleep 1
 }
 
+function install_tssh() {
+    print_info "正在安装tssh..."
+    apt install curl gpg
+    curl -s 'https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x7074ce75da7cc691c1ae1a7c7e51d1ad956055ca' | gpg --dearmor -o /usr/share/keyrings/trzsz.gpg
+    echo 'deb [signed-by=/usr/share/keyrings/trzsz.gpg] https://ppa.launchpadcontent.net/trzsz/ppa/ubuntu jammy main' | tee /etc/apt/sources.list.d/trzsz.list
+    apt update
+    apt install tssh
+    print_success "tssh 安装完成"
+    sleep 1
+}
+
+
+# ==================== 跑测试 ====================
+
+function run_nodequality() {
+    bash <(curl -sL https://run.NodeQuality.com)
+}
+
+function check_ip_quality() {
+    bash <(curl -Ls IP.Check.Place)
+}
+
 # ==================== 菜单显示函数 ====================
 
 # 显示主菜单
@@ -483,11 +505,22 @@ show_main_menu() {
     echo "1) 基本配置"
     echo "2) 安装工具"
     echo "3) 获取配置"
+    echo "4) 跑测试"
     echo "0) 退出"
     echo
     echo "======================================"
 }
 
+
+show_evaluate_menu() {
+    clear
+    print_menu_title "跑测试"
+    echo "1) 跑nodequality"
+    echo "2) 检查IP质量"
+    echo "0) 退出"
+    echo
+    echo "======================================"
+}
 
 # 显示安装工具菜单
 show_tools_menu() {
@@ -537,6 +570,9 @@ show_menu() {
         "configs")
             show_configs_menu
             ;;
+        "evaluate")
+            show_evaluate_menu
+            ;;
     esac
 }
 
@@ -571,6 +607,7 @@ process_menu_choice() {
                 1) basic_config ;;
                 2) CURRENT_MENU="tools" ;;
                 3) CURRENT_MENU="configs" ;;
+                4) CURRENT_MENU="evaluate" ;;
                 0) 
                     echo -e "\n${GREEN}感谢使用，再见！${NC}"
                     exit 0 
@@ -609,6 +646,17 @@ process_menu_choice() {
                 2) setup_zsh ;;
                 3) setup_fail2ban ;;
                 b) CURRENT_MENU="main" ;;
+                0) 
+                    echo -e "\n${GREEN}感谢使用，再见！${NC}"
+                    exit 0 
+                    ;;
+                *) print_warning "无效选项: $choice" ;;
+            esac
+            ;;
+        "evaluate")
+            case $choice in
+                1) run_nodequality ;;
+                2) check_ip_quality ;;
                 0) 
                     echo -e "\n${GREEN}感谢使用，再见！${NC}"
                     exit 0 

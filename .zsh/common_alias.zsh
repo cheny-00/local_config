@@ -74,3 +74,4 @@ alias python='python3'
 alias zc='nvim ~/.zshrc'
 alias zs='source ~/.zshrc'
 alias nv="nvim"
+alias s="tssh"
