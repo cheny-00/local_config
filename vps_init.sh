@@ -165,10 +165,51 @@ function install_basic_tools() {
     print_success "基本工具安装完成"
 }
 
+
+function install_fastfetch() {
+  print_info "🔍 获取 Fastfetch 最新版本号..."
+  latest_version=$(curl -s https://api.github.com/repos/fastfetch-cli/fastfetch/releases/latest | grep -oP '"tag_name": "\K[^"]+')
+  if [ -z "$latest_version" ]; then
+    print_error "无法获取版本号，请检查网络或 GitHub API。"
+    return 1
+  fi
+
+  print_info "📦 正在下载 fastfetch $latest_version..."
+  url="https://github.com/fastfetch-cli/fastfetch/releases/download/$latest_version/fastfetch-linux-amd64.tar.gz"
+  wget -q --show-progress "$url" -O fastfetch.tar.gz || { print_error "❌ 下载失败"; return 1; }
+
+  print_info "📂 解压中..."
+  tar -xf fastfetch.tar.gz
+  cd fastfetch-linux-amd64 || { print_error "❌ 解压目录不存在"; return 1; }
+
+  print_info "⚙️ 安装执行文件..."
+  install -Dm755 usr/bin/fastfetch /usr/local/bin/fastfetch
+  install -Dm755 usr/bin/flashfetch /usr/local/bin/flashfetch
+
+  print_info "🧠 安装补全和 man 文档..."
+  cp -v usr/share/bash-completion/completions/fastfetch /usr/share/bash-completion/completions/
+  cp -v usr/share/zsh/site-functions/_fastfetch /usr/share/zsh/site-functions/
+  cp -v usr/share/fish/vendor_completions.d/fastfetch.fish /usr/share/fish/vendor_completions.d/
+  cp -v usr/share/man/man1/fastfetch.1 /usr/share/man/man1/
+  gzip -f /usr/share/man/man1/fastfetch.1
+  mkdir -p /usr/share/fastfetch/
+  cp -rv usr/share/fastfetch/* /usr/share/fastfetch/
+
+  print_info "🧹 清理文件..."
+  cd ..
+  rm -rf fastfetch-linux-amd64 fastfetch.tar.gz
+
+  print_success "✅ Fastfetch $latest_version 安装完成！可以输入 fastfetch 查看效果啦～"
+  
+}
+
 # 安装常用工具
 function install_common_tools() {
     print_info "正在安装常用工具..."
     apt install -y btop zsh sudo build-essential fastfetch
+    if ! command -v fastfetch &>/dev/null; then
+        install_fastfetch
+    fi
     print_success "常用工具安装完成"
     sleep 1
 }
@@ -486,6 +527,7 @@ function setup_zsh() {
     if ! grep -q 'starship init' "$zshrc_path" 2>/dev/null; then
         echo 'export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"' >> "$zshrc_path"
         echo 'eval "$(starship init zsh)"' >> "$zshrc_path"
+        echo -e '\nif [[ -n "$SSH_CONNECTION" && -z "$FASTFETCH_SHOWN" && $- == *i* ]]; then\n  export FASTFETCH_SHOWN=1\n  command -v fastfetch >/dev/null && fastfetch\nfi' >> "$zshrc_path"
     fi
     
     if ! grep -q 'zoxide init' "$zshrc_path" 2>/dev/null; then
@@ -664,7 +706,7 @@ process_menu_choice() {
                 a) install_all_tools ;;
                 b) CURRENT_MENU="main" ;;
                 c) install_tssh ;;
-                d) install_neovim ;;
+                d) install_nvim ;;
                 e) install_lazyvim ;;
                 0) 
                     echo -e "\n${GREEN}感谢使用，再见！${NC}"

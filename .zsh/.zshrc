@@ -1,5 +1,8 @@
 
-fastfetch
+if [[ -n "$SSH_CONNECTION" && -z "$FASTFETCH_SHOWN" && $- == *i* ]]; then
+  export FASTFETCH_SHOWN=1
+  command -v fastfetch >/dev/null && fastfetch
+fi
 
 # ------------------ 基础环境变量 ------------------
 export ZINIT_HOME="${HOME}/.zinit/bin"
