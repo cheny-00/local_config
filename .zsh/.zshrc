@@ -17,7 +17,7 @@ export PATH="$HOME/.local/bin:$PATH"
 export TERM=xterm-256color
 #export TERM=screen-256color
 
-source $HOME/.zsh/common_alias.zsh
+source $HOME/common_alias.zsh
 
 # ------------------ 初始化  -------------------
 # eval "$(starship init zsh)"
@@ -87,7 +87,6 @@ setopt INC_APPEND_HISTORY
 setopt HIST_IGNORE_ALL_DUPS
 setopt HIST_REDUCE_BLANKS
 
-source ~/.zsh/common_alias.zsh
 
 # pyenv
 if command -v pyenv &>/dev/null; then

@@ -6,12 +6,14 @@ GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
+PURPLE='\033[0;35m'
 NC='\033[0m' # 重置颜色
 
 # 全局变量
 USERNAME=""
 USER_PASSWORD=""
 IP_ADDR=""
+CURRENT_MENU="main" # 当前菜单标识
 
 # 打印带颜色的信息
 print_info() {
@@ -30,6 +32,10 @@ print_error() {
     echo -e "${RED}[错误]${NC} $1"
 }
 
+print_menu_title() {
+    echo -e "\n${PURPLE}===== $1 =====${NC}\n"
+}
+
 # 检查是否为root用户
 check_root() {
     if [ "$(id -u)" -ne 0 ]; then
@@ -37,41 +43,46 @@ check_root() {
         exit 1
     fi
 }
+
 # 设置用户名
 set_username() {
-    read -p "请输入用户名: " USERNAME
-    if [ -z "$USERNAME" ]; then
-        print_error "用户名不能为空"
-        exit 1
-    fi
-    
-    # 检查用户是否存在
-    if ! id "$USERNAME" &>/dev/null; then
-        print_error "用户 '$USERNAME' 不存在"
-        echo "请先创建用户，可以选择以下操作:"
-        echo "1) 创建新用户"
-        echo "2) 输入其他用户名"
-        echo "3) 退出"
+    while true; do
+        read -p "请输入用户名: " USERNAME
+        if [ -z "$USERNAME" ]; then
+            print_error "用户名不能为空，请重新输入"
+            continue
+        fi
         
-        read -p "请选择操作 [1-3]: " choice
-        case $choice in
-            1)
-                create_user "$USERNAME"
-                ;;
-            2)
-                set_username  # 再次调用函数来输入新的用户名
-                ;;
-            3)
-                exit 0
-                ;;
-            *)
-                print_error "无效选择"
-                exit 1
-                ;;
-        esac
-    else
-        print_success "用户 '$USERNAME' 存在，继续操作"
-    fi
+        # 检查用户是否存在
+        if ! id "$USERNAME" &>/dev/null; then
+            print_error "用户 '$USERNAME' 不存在"
+            echo "请选择以下操作:"
+            echo "1) 创建新用户"
+            echo "2) 输入其他用户名"
+            echo "3) 退出"
+            
+            read -p "请选择操作 [1-3]: " choice
+            case $choice in
+                1)
+                    create_user "$USERNAME"
+                    break
+                    ;;
+                2)
+                    continue  # 继续循环，重新输入用户名
+                    ;;
+                3)
+                    exit 0
+                    ;;
+                *)
+                    print_error "无效选择"
+                    continue
+                    ;;
+            esac
+        else
+            print_success "用户 '$USERNAME' 存在，继续操作"
+            break
+        fi
+    done
 }
 
 function config_sshd() {
@@ -134,18 +145,17 @@ create_user() {
     echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/$USERNAME
 
     print_success "用户 '$USERNAME' 创建成功！"
-    
-    # 保存用户名到配置文件
-    # echo "export VPS_USER=$USERNAME" > /etc/profile.d/vps-init-user.sh
-    # chmod +x /etc/profile.d/vps-init-user.sh
 }
 
+
+# ==================== 功能实现区域 ====================
 
 # 更新系统
 function update_system() {
     print_info "正在更新系统..."
     apt update && apt upgrade -y
     print_success "系统更新完成"
+    sleep 1
 }
 
 # 安装基本工具
@@ -160,18 +170,21 @@ function install_common_tools() {
     print_info "正在安装常用工具..."
     apt install -y btop zsh sudo build-essential fastfetch
     print_success "常用工具安装完成"
+    sleep 1
 }
 
 function install_starship() {
     print_info "正在安装starship..."
     curl -sS https://starship.rs/install.sh | sh
     print_success "starship安装完成"
+    sleep 1
 }
 
 function install_zoxide() {
     print_info "正在安装zoxide..."
     curl -sS https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh
     print_success "zoxide安装完成"
+    sleep 1
 }
 
 # 安装Docker
@@ -189,11 +202,12 @@ function install_docker() {
     fi
     
     print_success "Docker安装完成"
+    sleep 1
 }
 
 # 配置BBR
-function install_bbr() {
-    print_info "正在安装BBR..."
+function get_bbr() {
+    print_info "正在获取BBR..."
     wget https://raw.githubusercontent.com/byJoey/Actions-bbr-v3/refs/heads/main/install.sh -O install.sh
     chmod +x install.sh
     ./install.sh
@@ -222,11 +236,11 @@ function install_eza() {
     apt update
     apt install -y eza
     print_success "eza安装完成"
+    sleep 1
 }
 
 #安装yazi
 function install_yazi() {
-
     if ! command -v yazi &>/dev/null; then
         print_info "正在安装 yazi..."
 
@@ -247,28 +261,23 @@ function install_yazi() {
 
         print_success "yazi 安装完成，所有用户都可以使用了！"
     else
-        print_done "yazi 已安装"
+        print_warning "yazi 已安装"
     fi
+    sleep 1
 }
 
 function install_fzf() {
     print_info "正在安装 fzf..."
 
-    if ! command -v fzf &>/dev/null; then fastfetch
+    if ! command -v fzf &>/dev/null; then
         git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
         ~/.fzf/install --all
         print_success "fzf 安装完成"
     else
-        print_done "fzf 已安装"
+        print_warning "fzf 已安装"
     fi
+    sleep 1
 }
-
-function install_nvim() {
-    print_info "正在安装 nvim..."
-    apt install -y neovim
-    print_success "nvim 安装完成"
-}
-
 
 function install_nvim() {
     print_info "正在安装 Neovim..."
@@ -286,8 +295,9 @@ function install_nvim() {
 
         print_success "Neovim 安装完成，所有用户都可以使用 'nvim'"
     else
-        print_done "Neovim 已安装"
+        print_warning "Neovim 已安装"
     fi
+    sleep 1
 }
 
 function install_lazyvim() {
@@ -297,6 +307,7 @@ function install_lazyvim() {
     rm -rf /etc/nvim/.git
 
     print_success "LazyVim 配置安装完成，路径：/etc/nvim"
+    sleep 1
 }
 
 validate_url_format() {
@@ -394,7 +405,7 @@ function setup_fail2ban() {
     systemctl enable fail2ban
     systemctl start fail2ban
     print_success "fail2ban 安装完成"
-
+    sleep 1
 }
 
 function setup_zsh() {
@@ -429,7 +440,7 @@ function setup_zsh() {
     fi
     
     # 添加 PATH、初始化代码 到该用户的 .zshrc
-    wget -O "/home/$USERNAME/.zshrc" https://raw.githubusercontent.com/cheny-00/local_config/refs/heads/main/.zshrc
+    wget -O "/home/$USERNAME/.zshrc" https://raw.githubusercontent.com/cheny-00/local_config/refs/heads/main/.zsh/.zshrc
     wget -O "/home/$USERNAME/.common_alias.zsh" https://raw.githubusercontent.com/cheny-00/local_config/refs/heads/main/.zsh/common_alias.zsh
     chown "$USERNAME:$USERNAME" "/home/$USERNAME/.zshrc"
     chown "$USERNAME:$USERNAME" "/home/$USERNAME/.common_alias.zsh"
@@ -437,6 +448,7 @@ function setup_zsh() {
     local zshrc_path="/home/$USERNAME/.zshrc"
     [ "$USERNAME" = "root" ] && zshrc_path="/root/.zshrc"
     
+    echo "===========================From local config===========================" >> "$zshrc_path"
     if ! grep -q 'starship init' "$zshrc_path" 2>/dev/null; then
         echo 'export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"' >> "$zshrc_path"
         echo 'eval "$(starship init zsh)"' >> "$zshrc_path"
@@ -445,118 +457,211 @@ function setup_zsh() {
     if ! grep -q 'zoxide init' "$zshrc_path" 2>/dev/null; then
         echo 'eval "$(zoxide init zsh)"' >> "$zshrc_path"
     fi
+    echo "===========================From local config===========================" >> "$zshrc_path"
     
     # 设置默认shell为zsh
     chsh -s $(which zsh) "$USERNAME"
     
     print_success "$USERNAME 的 zsh 配置完成 ✅"
+    sleep 1
 }
 
-show_menu() {
+# ==================== 菜单显示函数 ====================
+
+# 显示主菜单
+show_main_menu() {
+    clear
+    print_menu_title "VPS 初始化脚本"
     echo "============= 基本信息 ============="
     echo "当前操作用户：$USERNAME"
     echo "当前操作用户密码：$USER_PASSWORD"
     echo "当前VPS IP：$IP_ADDR"
-    echo "系统版本：$(lsb_release -a)"
-    echo "============= 安装选项 ============="
+    echo "系统版本：$(lsb_release -sd)"
+    echo "============= 功能菜单 ============="
     echo
-    echo "可用选项:"
-    echo "1) 安装常用工具"
-    echo "2) 配置sshd"
-    echo "3) 安装Docker"
-    echo "4) 安装BBR"
-    echo "5) 安装caddy"
-    echo "6) 安装eza"
-    echo "7) 安装fzf"
-    echo "8) 安装yazi"
-    echo "9) 安装 Neovim"
-    echo "10) 安装 LazyVim"
-    echo "11) 安装 ServerStatus 客户端"
-    echo "12) 安装 starship"
-    echo "13) 安装 zoxide"
-    echo "a) 安装全部"
-    echo "b) 安装 zsh 配置"
-    echo "c) 安装 fail2ban"
+    echo "请选择操作类别:"
+    echo "1) 基本配置"
+    echo "2) 安装工具"
+    echo "3) 获取配置"
     echo "0) 退出"
     echo
     echo "======================================"
-    echo
 }
 
-function install_all() {
+
+# 显示安装工具菜单
+show_tools_menu() {
+    clear
+    print_menu_title "安装工具"
+    echo "1) 安装常用工具"
+    echo "2) 配置sshd"
+    echo "3) 安装Docker"
+    echo "4) 安装caddy"
+    echo "5) 安装eza"
+    echo "6) 安装fzf"
+    echo "7) 安装yazi"
+    echo "8) 安装Neovim"
+    echo "9) 安装LazyVim"
+    echo "10) 安装ServerStatus客户端"
+    echo "11) 安装starship"
+    echo "12) 安装zoxide"
+    echo "a) 安装全部工具"
+    echo "b) 返回上级菜单"
+    echo "0) 退出"
+    echo
+    echo "======================================"
+}
+
+# 显示获取配置菜单
+show_configs_menu() {
+    clear
+    print_menu_title "获取配置"
+    echo "1) 获取BBR脚本"
+    echo "2) 安装zsh配置"
+    echo "3) 安装fail2ban"
+    echo "b) 返回上级菜单"
+    echo "0) 退出"
+    echo
+    echo "======================================"
+}
+
+# 根据当前菜单状态显示对应菜单
+show_menu() {
+    case $CURRENT_MENU in
+        "main")
+            show_main_menu
+            ;;
+        "tools")
+            show_tools_menu
+            ;;
+        "configs")
+            show_configs_menu
+            ;;
+    esac
+}
+
+
+
+# 只安装工具
+function install_all_tools() {
     install_common_tools
     config_sshd
     install_docker
-    install_bbr
     install_caddy
     install_eza
-    install_yazi
     install_fzf
+    install_yazi
     install_nvim
     install_lazyvim
+    install_serverstatus_client
     install_starship
     install_zoxide
-    install_serverstatus_client
+    
+    print_success "所有工具安装完成！"
+    sleep 2
 }
-# 执行选中的功能
-execute_function() {
-    case $1 in
-        1) install_common_tools ;;
-        2) config_sshd ;;
-        3) install_docker ;;
-        4) install_bbr ;;
-        5) install_caddy ;;
-        6) install_eza ;;
-        7) install_fzf ;;
-        8) install_yazi ;;
-        9) install_nvim ;;
-        10) install_lazyvim ;;
-        11) install_serverstatus_client ;;
-        12) install_starship ;;
-        13) install_zoxide ;;
-        a) install_all ;;
-        b) setup_fail2ban ;;
-        *) print_warning "无效选项: $1" ;;
+
+# 多层菜单处理逻辑
+process_menu_choice() {
+    local choice=$1
+    
+    case $CURRENT_MENU in
+        "main")
+            case $choice in
+                1) basic_config ;;
+                2) CURRENT_MENU="tools" ;;
+                3) CURRENT_MENU="configs" ;;
+                0) 
+                    echo -e "\n${GREEN}感谢使用，再见！${NC}"
+                    exit 0 
+                    ;;
+                *) print_warning "无效选项: $choice" ;;
+            esac
+            ;;
+            
+        "tools")
+            case $choice in
+                1) install_common_tools ;;
+                2) config_sshd ;;
+                3) install_docker ;;
+                4) install_caddy ;;
+                5) install_eza ;;
+                6) install_fzf ;;
+                7) install_yazi ;;
+                8) install_nvim ;;
+                9) install_lazyvim ;;
+                10) install_serverstatus_client ;;
+                11) install_starship ;;
+                12) install_zoxide ;;
+                a) install_all_tools ;;
+                b) CURRENT_MENU="main" ;;
+                0) 
+                    echo -e "\n${GREEN}感谢使用，再见！${NC}"
+                    exit 0 
+                    ;;
+                *) print_warning "无效选项: $choice" ;;
+            esac
+            ;;
+            
+        "configs")
+            case $choice in
+                1) get_bbr ;;
+                2) setup_zsh ;;
+                3) setup_fail2ban ;;
+                b) CURRENT_MENU="main" ;;
+                0) 
+                    echo -e "\n${GREEN}感谢使用，再见！${NC}"
+                    exit 0 
+                    ;;
+                *) print_warning "无效选项: $choice" ;;
+            esac
+            ;;
     esac
+}
+
+function basic_config() {
+    update_system 
+    install_basic_tools
 }
 
 # 主函数
 main() {
-
     IP_ADDR=$(curl -4 -sSL ifconfig.me)
 
     check_root
-    # update system
-    update_system 
-    # install basic tools
-    install_basic_tools
+
+    # 判断是否设置用户，默认设置用户（默认 Y）
+    while true; do
+        read -p "是否设置用户名？(y/n) [Y]: " need_username
+        need_username=${need_username:-y}
+        case "${need_username,,}" in
+            y|yes)
+                set_username
+                break
+                ;;
+            n|no)
+                USERNAME="root"
+                break
+                ;;
+            *)
+                print_error "无效输入，请输入 y 或 n"
+                ;;
+        esac
+    done
     
-    # 设置用户名
-    set_username
     
     if [ $# -eq 0 ]; then
         # 交互式模式
         while true; do
             show_menu
-            read -p "请输入要安装的项目编号（多个编号用空格分隔，输入0退出）: " choices
+            read -p "请输入选项: " choice
             
-            if [ "$choices" = "0" ]; then
-                echo -e "\n${GREEN}初始化完成${NC}"
-                echo "退出脚本"
-                exit 0
-            fi
-            
-            for choice in $choices; do
-                execute_function $choice
-            done
+            process_menu_choice "$choice"
         done
     else
         # 命令行参数模式
-        for choice in "$@"; do
-            execute_function $choice
-        done
-        
-        echo -e "\n${GREEN}初始化完成${NC}"
+        print_error "多层菜单模式下不支持命令行参数模式"
+        exit 1
     fi
 }
 
