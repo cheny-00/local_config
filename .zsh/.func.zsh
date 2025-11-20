@@ -1,6 +1,5 @@
 clip() {
   local data
-
   if [[ -f "$1" ]]; then
     data=$(< "$1")
   elif [ -t 0 ]; then
@@ -8,20 +7,20 @@ clip() {
   else
     data=$(cat)
   fi
-
-  local osc
-  osc="\033]52;c;$(printf "%s" "$data" | base64 | tr -d '\n')\a"
-
-  # Send using echo -ne to ensure escape codes work
+  
+  # Base64 编码
+  local b64
+  b64=$(printf "%s" "$data" | base64 | tr -d '\n')
+  
   if [ -n "$TMUX" ]; then
-    # Send through tmux passthrough
-    printf "\033Ptmux;\033%s\033\\" "$osc"
+    # tmux 环境：使用 DCS passthrough
+    # 关键：直接用 printf 输出原始字节，不要用变量存储转义序列
+    printf "\033Ptmux;\033\033]52;c;%s\007\033\\" "$b64"
   else
-    # echo -ne ensures it gets interpreted
-    echo -ne "$osc"
+    # 非 tmux 环境
+    printf "\033]52;c;%s\007" "$b64"
   fi
 }
-
 sshclip() {
   # 参数检查：确保正好传入两个参数
   if [ $# -ne 2 ]; then

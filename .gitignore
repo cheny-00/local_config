@@ -9,3 +9,8 @@ data
 .vscode/
 __pycache__/
 test.json
+
+.claude
+.gemini
+.cursor
+.codex
