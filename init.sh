@@ -379,6 +379,17 @@ EOF
     install_zoxide
     install_starship
 
+    # 配置 tmux (可选)
+    read -p "是否配置 tmux? (y/n): " setup_tmux
+    if [[ "$setup_tmux" =~ ^[Yy]$ ]]; then
+        if [ -f "$(dirname "$0")/tmux/tmux_setup.sh" ]; then
+            print_info "调用 tmux 配置脚本"
+            sudo -u "$USERNAME" bash "$(dirname "$0")/tmux/tmux_setup.sh"
+        else
+            print_warning "未找到 tmux_setup.sh 脚本，跳过 tmux 配置"
+        fi
+    fi
+
     # 创建配置目录
     create_config_dir
 
