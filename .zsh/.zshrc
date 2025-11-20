@@ -20,11 +20,9 @@ export PATH="$HOME/.local/bin:$PATH"
 export TERM=xterm-256color
 #export TERM=screen-256color
 
-source $HOME/common_alias.zsh
+source $HOME/.common_alias.zsh
+source $HOME/.func.zsh
 
-# ------------------ 初始化  -------------------
-# eval "$(starship init zsh)"
-# eval "$(zoxide init zsh)"
 
 # ------------------ 安装 Zinit（若未安装） ------------------
 if [[ ! -f "${ZINIT_HOME}/zinit.zsh" ]]; then
@@ -32,18 +30,34 @@ if [[ ! -f "${ZINIT_HOME}/zinit.zsh" ]]; then
   git clone https://github.com/zdharma-continuum/zinit.git "${ZINIT_HOME}"
 fi
 
+# ------------------ 补全系统 ------------------
+
 # 只在交互式 Shell 加载插件
+[[ $- != *i* ]] && return
 [[ -o interactive ]] && source "${ZINIT_HOME}/zinit.zsh"
-
-# ------------------ 插件加载（Turbo Mode） ------------------
-
-# 自动建议（右侧灰字）
-zinit ice wait lucid
-zinit light zsh-users/zsh-autosuggestions
 
 # 命令语法高亮
 zinit ice wait lucid
 zinit light zsh-users/zsh-syntax-highlighting
+
+# 自动建议（右侧灰字）
+zinit ice lucid
+zinit light zsh-users/zsh-autosuggestions
+
+# fzf 补全增强
+zinit ice lucid
+zinit light Aloxaf/fzf-tab
+
+
+# 立即启动
+autoload -Uz compinit 
+
+if [[ ! -f "$HOME/.cache/zsh/" ]]; then
+    mkdir -p ~/.cache/zsh
+fi
+compinit -i -d ~/.cache/zsh/.zcompdump
+
+# ------------------ 插件加载（Turbo Mode） ------------------
 
 # 历史模糊搜索（↑支持多词）
 zinit ice wait lucid
@@ -74,8 +88,6 @@ zinit snippet OMZ::plugins/git/git.plugin.zsh
 zinit ice wait lucid
 zinit snippet OMZ::plugins/docker/docker.plugin.zsh
 
-# ------------------ 补全系统 ------------------
-autoload -Uz compinit && compinit
 
 # ------------------ Zsh 优化行为 ------------------
 setopt AUTO_CD                # 自动进入目录
@@ -91,15 +103,10 @@ setopt HIST_IGNORE_ALL_DUPS
 setopt HIST_REDUCE_BLANKS
 
 
-# pyenv
-if command -v pyenv &>/dev/null; then
-    zinit ice wait lucid
-    zinit snippet OMZ::plugins/pyenv/pyenv.plugin.zsh
-    export PYENV_ROOT="$HOME/.pyenv"
-    [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
-    eval "$(pyenv init - zsh)"
-fi
+# ------------------ 初始化  -------------------
+eval "$(starship init zsh)"
+eval "$(zoxide init zsh)"
 
+# test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
 
-test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
-
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
