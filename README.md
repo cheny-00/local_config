@@ -31,6 +31,15 @@ bash <(curl -fsSL https://raw.githubusercontent.com/cheny-00/local_config/main/i
 - ✅ **eza** - 现代化 ls 替代品（带图标）
 - ✅ **fzf** - 模糊搜索工具
 - ✅ **zoxide** - 智能目录跳转
+- ✅ **tssh** - 增强的 SSH 客户端
+- ✅ **trzsz** - 支持 tmux 的文件传输工具
+
+#### 📦 基础工具
+- ✅ **系统工具**: curl, wget, git, tmux, htop, rsync
+- ✅ **网络工具**: iperf3, mtr
+- ✅ **数据处理**: jq, yq
+- ✅ **压缩工具**: zip, gzip, bzip2, xz-utils
+- ✅ **开发工具**: build-essential
 
 #### 📁 配置文件
 - ✅ `~/.vimrc` - vim 完整配置
@@ -62,6 +71,8 @@ bash <(curl -fsSL https://raw.githubusercontent.com/cheny-00/local_config/main/i
 - **eza**: 带图标的 ls 替代品
 - **fzf**: 模糊搜索工具
 - **zoxide**: 智能目录跳转 (z 命令)
+- **tssh**: 增强的 SSH 客户端，支持更多特性
+- **trzsz**: 支持 tmux 的文件传输工具 (类似 rz/sz)
 
 ### 配置文件
 - `~/.zshrc`: zsh 主配置
@@ -122,18 +133,22 @@ Ctrl+R      # 搜索历史命令
 
 ```
 local_config/
-├── init.sh                 # 🚀 一键安装脚本
-├── .vimrc                  # vim 配置文件
-├── .zsh/                   # zsh 配置目录
-│   ├── .zshrc             # zsh 主配置
-│   ├── .common_alias.zsh  # 通用别名
-│   └── .func.zsh          # 自定义函数
-├── fail2ban/              # fail2ban 配置
+├── init.sh                      # 🚀 一键安装脚本
+├── .vimrc                       # vim 配置文件
+├── .zsh/                        # zsh 配置目录
+│   ├── .zshrc                  # zsh 主配置
+│   ├── .common_alias.zsh       # 通用别名
+│   └── .func.zsh               # 自定义函数
+├── tmux/                        # tmux 配置目录
+│   ├── tmux_setup.sh           # tmux 安装脚本
+│   └── .tmux.conf              # tmux 配置文件
+├── fail2ban/                    # fail2ban 配置
 │   ├── jail.local
 │   └── action.d/
 │       └── discord.conf
 └── misc/
-    └── realm.sh           # Realm 转发工具
+    ├── realm.sh                # Realm 转发工具
+    └── install_tssh_trzsz.sh   # tssh 和 trzsz 安装脚本
 ```
 
 ### 安装后的用户目录结构
@@ -213,7 +228,11 @@ set background=dark   " 或 light
 ```bash
 # 1. 安装基础依赖
 sudo apt update
-sudo apt install -y curl wget git zsh vim
+sudo apt install -y curl wget git gpg unzip zsh sudo \
+    build-essential vim tmux htop \
+    iperf3 mtr-tiny jq yq \
+    zip gzip bzip2 xz-utils rsync \
+    ca-certificates
 
 # 2. 安装 eza
 sudo apt install -y gpg

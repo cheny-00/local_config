@@ -70,6 +70,28 @@ alias dus='du -sh ./* 2>/dev/null'
 
 # common
 alias python='python3'
+# caddy
+if command -v caddy &>/dev/null; then
+    # 核心管理
+    alias cadfmt="caddy fmt --overwrite"      # 必用：格式化并覆写当前目录的 Caddyfile
+    alias cadval="caddy validate"             # 验证配置文件语法是否正确
+    alias cadrel="caddy reload"               # 平滑重载配置（不中断服务）
+    alias cadrun="caddy run"                  # 前台运行（调试用）
+    alias cadstop="caddy stop"                # 停止运行
+
+    # 快速编辑配置 (假设在当前目录或 /etc/caddy/Caddyfile，可根据习惯修改)
+    alias vccf="vim /etc/caddy/Caddyfile"
+
+    # 进阶工具
+    alias cadver="caddy version"
+    alias cadlist="caddy list-modules"
+fi
+
+# caddy service (如果你使用 systemd/apt 安装的版本，推荐保留这些)
+alias cadst="sudo systemctl status caddy"       # 查看服务状态
+alias cadsr="sudo systemctl reload caddy"       # 重载服务配置 (更安全)
+alias cadrst="sudo systemctl restart caddy"     # 重启服务
+alias cadlog="sudo journalctl -u caddy -f -n 100" # 实时查看最近100行日志
 
 alias zc='nvim ~/.zshrc'
 alias zs='source ~/.zshrc'

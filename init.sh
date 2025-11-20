@@ -146,15 +146,42 @@ setup_user() {
 
 # 安装基础依赖
 install_dependencies() {
-    print_step "安装基础依赖"
+    print_step "安装基础依赖和常用工具"
 
     case "$OS" in
         ubuntu|debian)
+            print_info "更新软件包列表..."
             apt update
-            apt install -y curl wget git gpg unzip zsh sudo build-essential
+
+            print_info "安装基础工具..."
+            apt install -y \
+                curl wget git gpg unzip zsh sudo \
+                build-essential \
+                vim \
+                tmux \
+                htop \
+                iperf3 mtr-tiny  \
+                jq yq \
+                zip gzip bzip2 xz-utils \
+                rsync \
+                ca-certificates 
             ;;
         centos|rhel|fedora)
-            yum install -y curl wget git gpg unzip zsh sudo gcc gcc-c++ make
+            print_info "更新软件包列表..."
+            yum update -y
+
+            print_info "安装基础工具..."
+            yum install -y \
+                curl wget git gpg unzip zsh sudo \
+                build-essential \
+                vim \
+                tmux \
+                htop \
+                iperf3 mtr-tiny  \
+                jq yq \
+                zip gzip bzip2 xz-utils \
+                rsync \
+                ca-certificates 
             ;;
         *)
             print_error "不支持的操作系统: $OS"
@@ -162,7 +189,7 @@ install_dependencies() {
             ;;
     esac
 
-    print_success "基础依赖安装完成"
+    print_success "基础依赖和常用工具安装完成"
 }
 
 # =============================================================================
@@ -247,6 +274,32 @@ install_starship() {
     curl -sS https://starship.rs/install.sh | sh -s -- -y
 
     print_success "starship 安装完成"
+}
+
+# 安装 tssh 和 trzsz
+install_tssh_trzsz() {
+    print_step "安装 tssh 和 trzsz"
+
+    if command -v tssh &>/dev/null && command -v trzsz &>/dev/null; then
+        print_warning "tssh 和 trzsz 已安装，跳过"
+        return
+    fi
+
+    case "$OS" in
+        ubuntu|debian)
+            if [ -f "$(dirname "$0")/misc/install_tssh_trzsz.sh" ]; then
+                print_info "执行 tssh 和 trzsz 安装脚本"
+                bash "$(dirname "$0")/misc/install_tssh_trzsz.sh"
+            else
+                print_warning "未找到 install_tssh_trzsz.sh 脚本，跳过"
+            fi
+            ;;
+        *)
+            print_warning "暂不支持在 $OS 上自动安装 tssh 和 trzsz"
+            ;;
+    esac
+
+    print_success "tssh 和 trzsz 安装完成"
 }
 
 # =============================================================================
@@ -378,6 +431,7 @@ EOF
     install_fzf
     install_zoxide
     install_starship
+    install_tssh_trzsz
 
     # 配置 tmux (可选)
     read -p "是否配置 tmux? (y/n): " setup_tmux

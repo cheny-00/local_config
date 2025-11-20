@@ -153,7 +153,7 @@ Plug 'ervandew/supertab'
 Plug 'kamykn/spelunker.vim'
 Plug 'ghifarit53/tokyonight-vim'
 Plug 'NLKNguyen/papercolor-theme'
-
+Plug 'christoomey/vim-tmux-navigator'
 
 
 call plug#end()
@@ -164,6 +164,25 @@ call plug#end()
 " colorscheme catppuccin_mocha
 "  set bg=light
 "
+" 1. 告诉 Vim：不要傻等 Esc 键，快速响应
+set ttimeout
+set ttimeoutlen=50
+
+" 2. 手动把终端发送的 Escape 序列映射回 Alt 键
+" (原理：终端发 \eh，Vim 以为是 Esc+h，我们强行定义它为 <M-h>)
+execute "set <M-h>=\eh"
+execute "set <M-j>=\ej"
+execute "set <M-k>=\ek"
+execute "set <M-l>=\el"
+execute "set <M-\\>=\e\\"
+
+let g:tmux_navigator_no_mappings = 1
+nnoremap <silent> <M-h> :TmuxNavigateLeft<CR>
+nnoremap <silent> <M-j> :TmuxNavigateDown<CR>
+nnoremap <silent> <M-k> :TmuxNavigateUp<CR>
+nnoremap <silent> <M-l> :TmuxNavigateRight<CR>
+nnoremap <silent> <M-\> :TmuxNavigatePrevious<CR>
+
 set termguicolors
 
 " let g:tokyonight_style = 'storm' " available: night, storm
