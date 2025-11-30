@@ -3,6 +3,22 @@
 # =============================================================================
 # Dotfiles 一键安装脚本
 # =============================================================================
+#
+# 用法:
+#   bash init.sh [username] [hostname] [setup_ssh] [setup_tmux]
+#
+# 参数:
+#   username    - 要创建/配置的用户名（可选，默认交互式询问）
+#   hostname    - 要设置的主机名（可选，不提供则不修改）
+#   setup_ssh   - 是否配置 SSH 安全 (y/n，可选，默认 n)
+#   setup_tmux  - 是否配置 tmux (y/n，可选，默认 n)
+#
+# 示例:
+#   bash init.sh chy                        # 创建用户 chy，其他默认
+#   bash init.sh chy my-server              # 创建用户 chy，设置主机名
+#   bash init.sh chy my-server y n          # 创建用户，设置主机名，配置SSH，不配置tmux
+#   bash init.sh                            # 交互式模式，询问所有选项
+# =============================================================================
 
 set -e
 
@@ -119,6 +135,48 @@ create_user() {
     else
         print_warning "未找到 root 的 SSH 密钥，请手动配置"
     fi
+}
+
+# 设置主机名
+setup_hostname() {
+    local new_hostname="$1"
+
+    # 如果没有提供主机名，跳过
+    if [ -z "$new_hostname" ]; then
+        return
+    fi
+
+    print_step "设置主机名"
+
+    local current_hostname=$(hostname)
+    if [ "$current_hostname" = "$new_hostname" ]; then
+        print_info "主机名已经是 $new_hostname，跳过"
+        return
+    fi
+
+    print_info "当前主机名: $current_hostname"
+    print_info "新主机名: $new_hostname"
+
+    # 使用 hostnamectl 设置主机名（systemd 系统）
+    if command -v hostnamectl &>/dev/null; then
+        hostnamectl set-hostname "$new_hostname"
+    else
+        # 传统方法
+        echo "$new_hostname" > /etc/hostname
+        hostname "$new_hostname"
+    fi
+
+    # 更新 /etc/hosts
+    if grep -q "^127.0.1.1" /etc/hosts; then
+        # 如果存在 127.0.1.1，更新它
+        sed -i "s/^127.0.1.1.*/127.0.1.1\t$new_hostname/" /etc/hosts
+    else
+        # 如果不存在，添加在 127.0.0.1 后面
+        sed -i "/^127.0.0.1/a 127.0.1.1\t$new_hostname" /etc/hosts
+    fi
+
+    print_success "主机名已设置为: $new_hostname"
+    print_warning "主机名更改可能需要重新登录才能生效"
 }
 
 # 设置用户
@@ -276,11 +334,18 @@ install_zoxide() {
         return
     fi
 
+    # 安装到系统路径
     curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh
 
-    # 复制到系统路径
-    if [ -f "$USER_HOME/.local/bin/zoxide" ]; then
-        cp "$USER_HOME/.local/bin/zoxide" /usr/local/bin/
+    # 复制到系统路径（安装脚本会安装到 /root/.local/bin）
+    if [ -f /root/.local/bin/zoxide ]; then
+        cp /root/.local/bin/zoxide /usr/local/bin/
+        print_info "已复制 zoxide 到 /usr/local/bin"
+    elif [ -f "$HOME/.local/bin/zoxide" ]; then
+        cp "$HOME/.local/bin/zoxide" /usr/local/bin/
+        print_info "已复制 zoxide 到 /usr/local/bin"
+    else
+        print_warning "未找到 zoxide 二进制文件，可能需要手动配置 PATH"
     fi
 
     print_success "zoxide 安装完成"
@@ -476,7 +541,10 @@ EOF
     # 检测操作系统
     detect_os
 
-    # 设置用户 (支持参数传入)
+    # 设置主机名 (支持参数传入: $2)
+    setup_hostname "$2"
+
+    # 设置用户 (支持参数传入: $1)
     setup_user "$1"
 
     # 安装依赖
@@ -490,12 +558,15 @@ EOF
     install_tssh_trzsz
 
     # 配置 tmux (可选)
-    if [ -t 0 ]; then
-        read -p "是否配置 tmux? (y/n): " setup_tmux
-    else
-        setup_tmux="n"
+    local setup_tmux_choice="$4"
+    if [ -z "$setup_tmux_choice" ]; then
+        if [ -t 0 ]; then
+            read -p "是否配置 tmux? (y/n): " setup_tmux_choice
+        else
+            setup_tmux_choice="n"
+        fi
     fi
-    if [[ "$setup_tmux" =~ ^[Yy]$ ]]; then
+    if [[ "$setup_tmux_choice" =~ ^[Yy]$ ]]; then
         if [ -f "$(dirname "$0")/tmux/tmux_setup.sh" ]; then
             print_info "调用 tmux 配置脚本"
             sudo -u "$USERNAME" bash "$(dirname "$0")/tmux/tmux_setup.sh"
@@ -520,12 +591,15 @@ EOF
     set_default_shell
 
     # 配置 SSH 安全（可选）
-    if [ -t 0 ]; then
-        read -p "是否配置 SSH 安全? (y/n): " setup_ssh
-    else
-        setup_ssh="n"
+    local setup_ssh_choice="$3"
+    if [ -z "$setup_ssh_choice" ]; then
+        if [ -t 0 ]; then
+            read -p "是否配置 SSH 安全? (y/n): " setup_ssh_choice
+        else
+            setup_ssh_choice="n"
+        fi
     fi
-    if [[ "$setup_ssh" =~ ^[Yy]$ ]]; then
+    if [[ "$setup_ssh_choice" =~ ^[Yy]$ ]]; then
         if [ -f "$(dirname "$0")/ssh/ssh_security.sh" ]; then
             print_info "调用 SSH 安全配置脚本"
             bash "$(dirname "$0")/ssh/ssh_security.sh" full "$USERNAME"
