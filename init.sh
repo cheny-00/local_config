@@ -97,10 +97,28 @@ create_user() {
     print_info "密码: $password"
 
     # 添加 sudo 权限（免密）
+    mkdir -p /etc/sudoers.d
     echo "$user ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/$user
     chmod 440 /etc/sudoers.d/$user
 
     print_success "已为用户 $user 添加 sudo 权限"
+
+    # 复制 root 的 SSH 密钥到新用户
+    if [ -f /root/.ssh/authorized_keys ]; then
+        print_info "正在复制 SSH 密钥到用户 $user"
+        local user_home="/home/$user"
+        mkdir -p "$user_home/.ssh"
+
+        # 使用追加方式，避免覆盖用户已有的密钥
+        cat /root/.ssh/authorized_keys >> "$user_home/.ssh/authorized_keys"
+
+        chmod 700 "$user_home/.ssh"
+        chmod 600 "$user_home/.ssh/authorized_keys"
+        chown -R "$user:$user" "$user_home/.ssh"
+        print_success "SSH 密钥复制完成，可以使用 SSH 密钥登录用户 $user"
+    else
+        print_warning "未找到 root 的 SSH 密钥，请手动配置"
+    fi
 }
 
 # 设置用户
@@ -117,7 +135,13 @@ setup_user() {
     # 检查用户是否存在
     if ! check_user_exists "$USERNAME"; then
         print_warning "用户 $USERNAME 不存在"
-        read -p "是否创建该用户? (y/n): " create_choice
+
+        if [ -t 0 ]; then
+            read -p "是否创建该用户? (y/n): " create_choice
+        else
+            create_choice="y"
+            print_info "非交互模式，自动创建用户"
+        fi
 
         if [[ "$create_choice" =~ ^[Yy]$ ]]; then
             create_user "$USERNAME"
@@ -379,6 +403,37 @@ setup_zsh_config() {
     print_success "zsh 配置文件下载完成"
 }
 
+# 配置 vim
+setup_vim_config() {
+    print_step "配置 vim"
+
+    # 下载 .vimrc
+    print_info "下载 .vimrc"
+    wget -q -O "$USER_HOME/.vimrc" "$REPO_URL/.vimrc" || {
+        print_error "下载 .vimrc 失败"
+        return 1
+    }
+
+    # 创建 vim 目录结构
+    print_info "创建 vim 目录结构"
+    mkdir -p "$USER_HOME/.vim/files/"{backup,undo,swap,info}
+    mkdir -p "$USER_HOME/.vim/"{autoload,plugged}
+
+    # 下载 vim-plug 插件管理器
+    print_info "安装 vim-plug 插件管理器"
+    curl -fsSLo "$USER_HOME/.vim/autoload/plug.vim" --create-dirs \
+        https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim || {
+        print_warning "下载 vim-plug 失败，请手动安装"
+    }
+
+    # 设置文件所有者
+    chown -R "$USERNAME:$USERNAME" "$USER_HOME/.vimrc"
+    chown -R "$USERNAME:$USERNAME" "$USER_HOME/.vim"
+
+    print_success "vim 配置完成"
+    print_info "首次使用 vim 时，运行 :PlugInstall 安装插件"
+}
+
 # 设置 zsh 为默认 shell
 set_default_shell() {
     print_step "设置默认 shell"
@@ -435,7 +490,11 @@ EOF
     install_tssh_trzsz
 
     # 配置 tmux (可选)
-    read -p "是否配置 tmux? (y/n): " setup_tmux
+    if [ -t 0 ]; then
+        read -p "是否配置 tmux? (y/n): " setup_tmux
+    else
+        setup_tmux="n"
+    fi
     if [[ "$setup_tmux" =~ ^[Yy]$ ]]; then
         if [ -f "$(dirname "$0")/tmux/tmux_setup.sh" ]; then
             print_info "调用 tmux 配置脚本"
@@ -454,11 +513,18 @@ EOF
     # 配置 zsh
     setup_zsh_config
 
+    # 配置 vim
+    setup_vim_config
+
     # 设置默认 shell
     set_default_shell
 
     # 配置 SSH 安全（可选）
-    read -p "是否配置 SSH 安全? (y/n): " setup_ssh
+    if [ -t 0 ]; then
+        read -p "是否配置 SSH 安全? (y/n): " setup_ssh
+    else
+        setup_ssh="n"
+    fi
     if [[ "$setup_ssh" =~ ^[Yy]$ ]]; then
         if [ -f "$(dirname "$0")/ssh/ssh_security.sh" ]; then
             print_info "调用 SSH 安全配置脚本"
