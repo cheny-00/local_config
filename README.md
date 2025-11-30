@@ -17,7 +17,7 @@
 ### 显示帮助信息
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/cheny-00/local_config/main/init.sh) -- --help
+bash <(curl -fsSL https://raw.githubusercontent.com/cheny-00/local_config/main/init.sh) --help
 ```
 
 ### 一键安装
@@ -27,13 +27,13 @@ bash <(curl -fsSL https://raw.githubusercontent.com/cheny-00/local_config/main/i
 bash <(curl -fsSL https://raw.githubusercontent.com/cheny-00/local_config/main/init.sh)
 
 # 指定用户名
-bash <(curl -fsSL https://raw.githubusercontent.com/cheny-00/local_config/main/init.sh) -- -u chy
+bash <(curl -fsSL https://raw.githubusercontent.com/cheny-00/local_config/main/init.sh) -u chy
 
 # 指定用户名和主机名
-bash <(curl -fsSL https://raw.githubusercontent.com/cheny-00/local_config/main/init.sh) -- -u chy -h my-server
+bash <(curl -fsSL https://raw.githubusercontent.com/cheny-00/local_config/main/init.sh) -u chy -h my-server
 
 # 完整配置（用户名、主机名、SSH 安全、tmux）
-bash <(curl -fsSL https://raw.githubusercontent.com/cheny-00/local_config/main/init.sh) -- -u chy -h my-server -k -t
+bash <(curl -fsSL https://raw.githubusercontent.com/cheny-00/local_config/main/init.sh) -u chy -h my-server -k -t
 ```
 
 ### 命令行选项
