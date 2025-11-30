@@ -5,19 +5,21 @@
 # =============================================================================
 #
 # 用法:
-#   bash init.sh [username] [hostname] [setup_ssh] [setup_tmux]
+#   bash init.sh [OPTIONS]
 #
-# 参数:
-#   username    - 要创建/配置的用户名（可选，默认交互式询问）
-#   hostname    - 要设置的主机名（可选，不提供则不修改）
-#   setup_ssh   - 是否配置 SSH 安全 (y/n，可选，默认 n)
-#   setup_tmux  - 是否配置 tmux (y/n，可选，默认 n)
+# 选项:
+#   --help              显示此帮助信息
+#   -u, --user NAME     指定用户名（默认交互式询问）
+#   -h, --hostname NAME 指定主机名（默认不修改）
+#   -k, --ssh-key       配置 SSH 安全
+#   -t, --tmux          配置 tmux
 #
 # 示例:
-#   bash init.sh chy                        # 创建用户 chy，其他默认
-#   bash init.sh chy my-server              # 创建用户 chy，设置主机名
-#   bash init.sh chy my-server y n          # 创建用户，设置主机名，配置SSH，不配置tmux
-#   bash init.sh                            # 交互式模式，询问所有选项
+#   bash init.sh --help                           # 显示帮助
+#   bash init.sh -u chy                           # 创建用户 chy
+#   bash init.sh -u chy -h my-server              # 创建用户并设置主机名
+#   bash init.sh -u chy -h my-server -k -t        # 全部配置
+#   bash init.sh --user chy --hostname my-server  # 使用长选项
 # =============================================================================
 
 set -e
@@ -35,6 +37,12 @@ NC='\033[0m'
 USERNAME=""
 USER_HOME=""
 REPO_URL="https://raw.githubusercontent.com/cheny-00/local_config/main"
+
+# 命令行参数变量
+ARG_USERNAME=""
+ARG_HOSTNAME=""
+ARG_SETUP_SSH="n"
+ARG_SETUP_TMUX="n"
 
 # =============================================================================
 # 辅助函数
@@ -58,6 +66,89 @@ print_error() {
 
 print_step() {
     echo -e "\n${PURPLE}>>> $1${NC}\n"
+}
+
+# 显示帮助信息
+show_help() {
+    cat << EOF
+${CYAN}
+╔═══════════════════════════════════════════════════════════╗
+║                                                           ║
+║           Dotfiles 一键安装脚本                           ║
+║                                                           ║
+╚═══════════════════════════════════════════════════════════╝
+${NC}
+用法:
+  bash init.sh [OPTIONS]
+
+选项:
+  --help              显示此帮助信息
+  -u, --user NAME     指定用户名（默认交互式询问）
+  -h, --hostname NAME 指定主机名（默认不修改）
+  -k, --ssh-key       配置 SSH 安全
+  -t, --tmux          配置 tmux
+
+功能:
+  - 自动检测/创建用户
+  - 安装 zsh + starship + eza + fzf + zoxide
+  - 配置 vim 完整环境
+  - 配置 dotfiles
+  - 设置 starship nerd-font-symbols 主题
+  - SSH 公钥配置与安全加固（可选）
+
+示例:
+  bash init.sh --help
+    显示此帮助信息
+
+  bash init.sh -u chy
+    创建用户 chy，其他使用默认配置
+
+  bash init.sh -u chy -h my-server
+    创建用户 chy，设置主机名为 my-server
+
+  bash init.sh -u chy -h my-server -k -t
+    创建用户，设置主机名，配置 SSH 安全和 tmux
+
+  bash init.sh --user chy --hostname my-server --ssh-key
+    使用长选项格式
+
+  bash init.sh
+    交互式模式，询问所有配置选项
+
+EOF
+    exit 0
+}
+
+# 解析命令行参数
+parse_arguments() {
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --help)
+                show_help
+                ;;
+            -u|--user)
+                ARG_USERNAME="$2"
+                shift 2
+                ;;
+            -h|--hostname)
+                ARG_HOSTNAME="$2"
+                shift 2
+                ;;
+            -k|--ssh-key)
+                ARG_SETUP_SSH="y"
+                shift
+                ;;
+            -t|--tmux)
+                ARG_SETUP_TMUX="y"
+                shift
+                ;;
+            *)
+                print_error "未知选项: $1"
+                echo "使用 --help 查看帮助信息"
+                exit 1
+                ;;
+        esac
+    done
 }
 
 # 检查是否为 root 用户
@@ -518,6 +609,9 @@ set_default_shell() {
 # =============================================================================
 
 main() {
+    # 解析命令行参数
+    parse_arguments "$@"
+
     echo -e "${CYAN}"
     cat << "EOF"
 ╔═══════════════════════════════════════════════════════════╗
@@ -541,11 +635,11 @@ EOF
     # 检测操作系统
     detect_os
 
-    # 设置主机名 (支持参数传入: $2)
-    setup_hostname "$2"
+    # 设置主机名
+    setup_hostname "$ARG_HOSTNAME"
 
-    # 设置用户 (支持参数传入: $1)
-    setup_user "$1"
+    # 设置用户
+    setup_user "$ARG_USERNAME"
 
     # 安装依赖
     install_dependencies
@@ -558,8 +652,8 @@ EOF
     install_tssh_trzsz
 
     # 配置 tmux (可选)
-    local setup_tmux_choice="$4"
-    if [ -z "$setup_tmux_choice" ]; then
+    local setup_tmux_choice="$ARG_SETUP_TMUX"
+    if [ "$setup_tmux_choice" != "y" ]; then
         if [ -t 0 ]; then
             read -p "是否配置 tmux? (y/n): " setup_tmux_choice
         else
@@ -591,8 +685,8 @@ EOF
     set_default_shell
 
     # 配置 SSH 安全（可选）
-    local setup_ssh_choice="$3"
-    if [ -z "$setup_ssh_choice" ]; then
+    local setup_ssh_choice="$ARG_SETUP_SSH"
+    if [ "$setup_ssh_choice" != "y" ]; then
         if [ -t 0 ]; then
             read -p "是否配置 SSH 安全? (y/n): " setup_ssh_choice
         else
