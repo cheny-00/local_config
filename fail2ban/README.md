@@ -221,6 +221,27 @@ EOF
 sudo systemctl restart fail2ban
 ```
 
+### Caddy S3 (SeaweedFS) 保护
+
+```bash
+sudo tee /etc/fail2ban/jail.d/caddy-s3.conf > /dev/null << 'EOF'
+[caddy-s3]
+enabled = true
+port = http,https
+filter = caddy-s3
+action = iptables-allports[name=caddy-s3]
+         discord-webhook[webhook_url="YOUR_DISCORD_WEBHOOK_URL"]
+logpath = /var/log/caddy/s3-access.log
+maxretry = 3
+bantime = 14400
+findtime = 3600
+EOF
+
+sudo systemctl restart fail2ban
+```
+
+**注意**：需要先配置 Caddy 日志。详见 [Caddy S3 完整指南](docs/caddy-s3-guide.md)
+
 ## 🔧 添加新服务（通用方法）
 
 ### 1. 创建 Filter
@@ -245,6 +266,8 @@ ignoreregex =
 - SSH: `^.*Failed password for .* from <ADDR>.*$`
 - Web: `^.*401.*<ADDR>.*$`
 - API: `^.*authentication failed.*<ADDR>.*$`
+- JSON 日志: `^.*"remote_ip":"<ADDR>".*"status":403.*$`
+- Caddy: `^<ADDR> - .* \[.*\] ".*" 403 .*$`
 
 ### 2. 创建 Jail
 
@@ -524,11 +547,17 @@ fail2ban/
 │   └── discord-webhook.conf         # Discord 通知 action
 ├── filter.d/
 │   ├── vaultwarden.conf             # Vaultwarden filter
-│   └── qbittorrent.conf             # qBittorrent filter
+│   ├── qbittorrent.conf             # qBittorrent filter
+│   ├── caddy-s3.conf                # Caddy S3 filter
+│   └── seaweedfs-s3.conf            # SeaweedFS S3 filter
 ├── examples/
 │   ├── sshd.conf                    # SSH jail 示例
 │   ├── vaultwarden.conf             # Vaultwarden jail 示例
-│   └── qbittorrent.conf             # qBittorrent jail 示例
+│   ├── qbittorrent.conf             # qBittorrent jail 示例
+│   ├── caddy-s3.conf                # Caddy S3 jail 示例
+│   └── seaweedfs-s3.conf            # SeaweedFS S3 jail 示例
+├── docs/
+│   └── caddy-s3-guide.md            # Caddy S3 完整指南
 └── notify/
     └── discord_notify.py            # Discord 通知脚本
     # 未来支持:
