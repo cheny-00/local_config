@@ -154,7 +154,7 @@ def send_discord_notification(webhook_url, color, title, description, fields=Non
 
 def main():
     if len(sys.argv) < 3:
-        print("Usage: notify.py <action> <jail_name> [args...] <webhook_url>", file=sys.stderr)
+        print("Usage: discord_notify.py <action> <jail_name> [args...] <webhook_url>", file=sys.stderr)
         sys.exit(1)
     
     action = sys.argv[1]
