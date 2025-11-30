@@ -5,22 +5,46 @@
 ## ✨ 特性
 
 - 🚀 **一键安装** - 单条命令完成所有配置
-- 👤 **智能用户管理** - 自动检测/创建用户
+- 👤 **智能用户管理** - 自动检测/创建用户，自动复制 SSH 密钥
 - 🎨 **精美主题** - Starship nerd-font-symbols 主题
-- 📝 **完整配置** - vim、zsh 全套配置
+- 📝 **完整配置** - vim、zsh、tmux 全套配置
 - 🔧 **开箱即用** - 安装即可使用，无需手动配置
+- 🖥️ **主机名管理** - 自动设置主机名并更新 /etc/hosts
+- ⚙️ **灵活参数** - 支持 GNU 风格命令行选项
 
 ## 🚀 快速开始
+
+### 显示帮助信息
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/cheny-00/local_config/main/init.sh) -- --help
+```
 
 ### 一键安装
 
 ```bash
-# 交互式安装（会询问用户名）
+# 交互式安装（会询问所有配置选项）
 bash <(curl -fsSL https://raw.githubusercontent.com/cheny-00/local_config/main/init.sh)
 
-# 或者直接指定用户名
-bash <(curl -fsSL https://raw.githubusercontent.com/cheny-00/local_config/main/init.sh) username
+# 指定用户名
+bash <(curl -fsSL https://raw.githubusercontent.com/cheny-00/local_config/main/init.sh) -- -u chy
+
+# 指定用户名和主机名
+bash <(curl -fsSL https://raw.githubusercontent.com/cheny-00/local_config/main/init.sh) -- -u chy -h my-server
+
+# 完整配置（用户名、主机名、SSH 安全、tmux）
+bash <(curl -fsSL https://raw.githubusercontent.com/cheny-00/local_config/main/init.sh) -- -u chy -h my-server -k -t
 ```
+
+### 命令行选项
+
+| 选项 | 长选项 | 说明 |
+|------|--------|------|
+| `-u NAME` | `--user NAME` | 指定用户名（默认交互式询问） |
+| `-h NAME` | `--hostname NAME` | 指定主机名（默认不修改） |
+| `-k` | `--ssh-key` | 配置 SSH 安全 |
+| `-t` | `--tmux` | 配置 tmux |
+| | `--help` | 显示帮助信息 |
 
 ### 功能清单
 
@@ -367,6 +391,16 @@ sudo chown -R $USER:$USER ~
 5. 开启 Pull Request
 
 ## 📜 更新日志
+
+### v3.0 (2025-01-30)
+- ✨ 添加 GNU 风格命令行选项支持（`--help`, `-u`, `-h`, `-k`, `-t`）
+- ✨ 添加主机名设置功能，自动更新 /etc/hosts
+- ✨ 自动复制 SSH 密钥到新用户（追加模式）
+- 🐛 修复 zoxide 安装路径问题
+- 🐛 修复非交互式运行时的 read 命令问题
+- 🐛 修复 sudo 主机名解析警告
+- 📝 添加完整的帮助文档和使用示例
+- ⚠️ **破坏性变更**: 旧的位置参数格式不再支持
 
 ### v2.0 (2025-01-20)
 - ✨ 添加 vim 完整配置和插件管理
