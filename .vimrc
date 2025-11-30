@@ -109,9 +109,23 @@ endif
 " https://github.com/mhinz/vim-galore#handling-backup-swap-undo-and-viminfo-files
 "
 
-if !isdirectory($HOME.'/.vim/files') && exists('*mkdir')
-  call mkdir($HOME.'/.vim/files')
+" Create necessary directories if they don't exist
+if exists('*mkdir')
+  let s:vim_dirs = [
+    \ $HOME.'/.vim/files',
+    \ $HOME.'/.vim/files/backup',
+    \ $HOME.'/.vim/files/undo',
+    \ $HOME.'/.vim/files/info',
+    \ $HOME.'/.vim/files/swap'
+    \ ]
+
+  for s:dir in s:vim_dirs
+    if !isdirectory(s:dir)
+      call mkdir(s:dir, 'p', 0700)
+    endif
+  endfor
 endif
+
 set backup
 set backupdir=$HOME/.vim/files/backup/
 set backupext=-vimbackup

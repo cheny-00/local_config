@@ -409,6 +409,7 @@ main() {
 ║    - 安装 zsh + starship + eza + fzf + zoxide           ║
 ║    - 配置 dotfiles                                        ║
 ║    - 设置 starship nerd-font-symbols 主题                ║
+║    - SSH 公钥配置与安全加固                              ║
 ║                                                           ║
 ╚═══════════════════════════════════════════════════════════╝
 EOF
@@ -455,6 +456,17 @@ EOF
 
     # 设置默认 shell
     set_default_shell
+
+    # 配置 SSH 安全（可选）
+    read -p "是否配置 SSH 安全? (y/n): " setup_ssh
+    if [[ "$setup_ssh" =~ ^[Yy]$ ]]; then
+        if [ -f "$(dirname "$0")/ssh/ssh_security.sh" ]; then
+            print_info "调用 SSH 安全配置脚本"
+            bash "$(dirname "$0")/ssh/ssh_security.sh" full "$USERNAME"
+        else
+            print_warning "未找到 ssh_security.sh 脚本，跳过 SSH 配置"
+        fi
+    fi
 
     # 完成
     echo -e "\n${GREEN}╔═══════════════════════════════════════════════════════╗${NC}"
