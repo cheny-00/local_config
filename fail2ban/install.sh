@@ -42,6 +42,13 @@ else
     REAL_USER=$(whoami)
 fi
 
+# 获取用户 HOME 目录
+if [ "$REAL_USER" = "root" ]; then
+    USER_HOME="/root"
+else
+    USER_HOME="/home/$REAL_USER"
+fi
+
 print_info "当前用户: $REAL_USER"
 
 # ==============================================================================
@@ -71,7 +78,7 @@ print_success "依赖检查完成"
 # ==============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="/home/$REAL_USER/workspace/fail2ban/fail2ban-discord"
+PROJECT_DIR="$USER_HOME/workspace/fail2ban/fail2ban-discord"
 
 print_info "创建项目目录: $PROJECT_DIR"
 sudo -u "$REAL_USER" mkdir -p "$PROJECT_DIR"
@@ -97,7 +104,7 @@ chown "$REAL_USER:$REAL_USER" "$PROJECT_DIR/pyproject.toml"
 # 初始化 uv 环境
 print_info "初始化 Python 环境..."
 cd "$PROJECT_DIR"
-sudo -u "$REAL_USER" /home/$REAL_USER/.local/bin/uv sync
+sudo -u "$REAL_USER" $USER_HOME/.local/bin/uv sync
 
 print_success "Python 项目创建完成"
 
@@ -125,7 +132,7 @@ cat > /usr/local/bin/fail2ban-discord-notify << EOF
 #!/bin/bash
 # fail2ban Discord notification wrapper using uv
 cd $PROJECT_DIR
-exec /home/$REAL_USER/.local/bin/uv run discord_notify.py "\$@"
+exec $USER_HOME/.local/bin/uv run discord_notify.py "\$@"
 EOF
 
 chmod +x /usr/local/bin/fail2ban-discord-notify
