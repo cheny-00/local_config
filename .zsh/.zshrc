@@ -55,7 +55,15 @@ autoload -Uz compinit
 if [[ ! -f "$HOME/.cache/zsh/" ]]; then
     mkdir -p ~/.cache/zsh
 fi
-compinit -i -d ~/.cache/zsh/.zcompdump
+# 使用 -C 略过安全检查以加快速度，如需安全检查改回 -i
+#compinit -i -d ~/.cache/zsh/.zcompdump
+compinit -d ~/.cache/zsh/.zcompdump
+
+# ------------------ 关键组件: Edit Command Line ------------------
+# 必须在高亮插件加载之前定义！
+autoload -Uz edit-command-line
+zle -N edit-command-line
+bindkey '^x' edit-command-line  # 这里绑定了 Ctrl+X，你也可以改回 ^v
 
 # ------------------ 插件加载（Turbo Mode） ------------------
 
