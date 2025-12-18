@@ -68,13 +68,14 @@ detect_system() {
 
 # Get latest Go version
 get_latest_go_version() {
-    echo_info "Fetching latest Go version..."
+    # Redirect info messages to stderr so they don't pollute the version output
+    echo_info "Fetching latest Go version..." >&2
     
     # Try to get version from official Go website
     local version=$(curl -fsSL "https://go.dev/VERSION?m=text" 2>/dev/null | head -n 1)
     
     if [ -z "$version" ]; then
-        echo_warn "Failed to fetch latest version, using fallback version 1.23.4"
+        echo_warn "Failed to fetch latest version, using fallback version 1.23.4" >&2
         echo "1.23.4"
         return
     fi
@@ -82,7 +83,7 @@ get_latest_go_version() {
     # Remove 'go' prefix if present (e.g., "go1.23.4" -> "1.23.4")
     version=${version#go}
     
-    echo_info "Latest Go version: $version"
+    echo_info "Latest Go version: $version" >&2
     echo "$version"
 }
 
