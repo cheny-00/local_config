@@ -66,6 +66,26 @@ detect_system() {
     echo_info "Detected: $OS / $ARCH"
 }
 
+# Get latest Go version
+get_latest_go_version() {
+    echo_info "Fetching latest Go version..."
+    
+    # Try to get version from official Go website
+    local version=$(curl -fsSL "https://go.dev/VERSION?m=text" 2>/dev/null | head -n 1)
+    
+    if [ -z "$version" ]; then
+        echo_warn "Failed to fetch latest version, using fallback version 1.23.4"
+        echo "1.23.4"
+        return
+    fi
+    
+    # Remove 'go' prefix if present (e.g., "go1.23.4" -> "1.23.4")
+    version=${version#go}
+    
+    echo_info "Latest Go version: $version"
+    echo "$version"
+}
+
 # Check if Go is installed (needed for xcaddy)
 check_go() {
     if command -v go &> /dev/null; then
@@ -80,15 +100,33 @@ check_go() {
 
 # Install Go
 install_go() {
-    GO_VERSION="1.21.5"
+    GO_VERSION=$(get_latest_go_version)
     GO_DOWNLOAD_URL="https://go.dev/dl/go${GO_VERSION}.${OS}-${ARCH}.tar.gz"
     
     echo_info "Downloading Go ${GO_VERSION}..."
-    curl -L "$GO_DOWNLOAD_URL" -o /tmp/go.tar.gz
+    echo_info "Download URL: $GO_DOWNLOAD_URL"
+    
+    if ! curl -fSL "$GO_DOWNLOAD_URL" -o /tmp/go.tar.gz; then
+        echo_error "Failed to download Go from $GO_DOWNLOAD_URL"
+        echo_error "Please check your internet connection or the URL"
+        exit 1
+    fi
+    
+    # Verify download
+    if [ ! -f /tmp/go.tar.gz ] || [ ! -s /tmp/go.tar.gz ]; then
+        echo_error "Downloaded file is missing or empty"
+        exit 1
+    fi
     
     echo_info "Installing Go..."
     rm -rf /usr/local/go
-    tar -C /usr/local -xzf /tmp/go.tar.gz
+    
+    if ! tar -C /usr/local -xzf /tmp/go.tar.gz; then
+        echo_error "Failed to extract Go archive"
+        rm /tmp/go.tar.gz
+        exit 1
+    fi
+    
     rm /tmp/go.tar.gz
     
     # Add Go to PATH
@@ -103,7 +141,13 @@ install_go() {
         echo 'export PATH=$PATH:$GOPATH/bin' >> /etc/profile
     fi
     
-    echo_info "Go installed successfully"
+    # Verify installation
+    if ! /usr/local/go/bin/go version; then
+        echo_error "Go installation verification failed"
+        exit 1
+    fi
+    
+    echo_info "Go installed successfully: $(/usr/local/go/bin/go version)"
 }
 
 # Install xcaddy
@@ -114,14 +158,27 @@ install_xcaddy() {
     export GOPATH=$HOME/go
     export PATH=$PATH:$GOPATH/bin
     
-    go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
+    # Create Go binary directory if it doesn't exist
+    mkdir -p "$GOPATH/bin"
     
-    # Copy xcaddy to /usr/local/bin if it's not there
-    if [ -f "$GOPATH/bin/xcaddy" ] && [ ! -f "/usr/local/bin/xcaddy" ]; then
-        cp "$GOPATH/bin/xcaddy" /usr/local/bin/
+    echo_info "Running: go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest"
+    if ! go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest; then
+        echo_error "Failed to install xcaddy"
+        echo_error "This might be due to network issues or Go configuration problems"
+        exit 1
     fi
     
-    echo_info "xcaddy installed successfully"
+    # Copy xcaddy to /usr/local/bin if it's not there
+    if [ -f "$GOPATH/bin/xcaddy" ]; then
+        cp "$GOPATH/bin/xcaddy" /usr/local/bin/
+        chmod +x /usr/local/bin/xcaddy
+        echo_info "xcaddy copied to /usr/local/bin/"
+    else
+        echo_error "xcaddy binary not found at $GOPATH/bin/xcaddy"
+        exit 1
+    fi
+    
+    echo_info "xcaddy installed successfully: $(xcaddy version)"
 }
 
 # Build Caddy with Cloudflare DNS module
@@ -134,10 +191,28 @@ build_caddy() {
     
     cd /tmp
     
+    # Clean up any previous build
+    rm -f /tmp/caddy
+    
+    echo_info "This may take a few minutes..."
     if [ "$CADDY_VERSION" = "latest" ]; then
-        xcaddy build --with "$CF_MODULE"
+        if ! xcaddy build --with "$CF_MODULE"; then
+            echo_error "Failed to build Caddy with xcaddy"
+            echo_error "Check the output above for specific error messages"
+            exit 1
+        fi
     else
-        xcaddy build "$CADDY_VERSION" --with "$CF_MODULE"
+        if ! xcaddy build "$CADDY_VERSION" --with "$CF_MODULE"; then
+            echo_error "Failed to build Caddy version $CADDY_VERSION"
+            echo_error "Check the output above for specific error messages"
+            exit 1
+        fi
+    fi
+    
+    # Verify the binary was created
+    if [ ! -f /tmp/caddy ]; then
+        echo_error "Caddy binary was not created at /tmp/caddy"
+        exit 1
     fi
     
     echo_info "Caddy built successfully"
