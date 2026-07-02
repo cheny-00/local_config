@@ -87,39 +87,17 @@ install_tpm() {
 # =============================================================================
 
 configure_tmux() {
-    print_step "配置 tmux"
+    print_step "检查 tmux 配置"
 
-    local source_config="$SCRIPT_DIR/.tmux.conf"
-
-    # 备份已有配置
-    if [ -f "$TMUX_CONF" ]; then
-        local backup="$TMUX_CONF.backup.$(date +%s)"
-        print_warning "检测到已有配置，备份至: $backup"
-        mv "$TMUX_CONF" "$backup"
+    # .tmux.conf 由 chezmoi dotfiles 仓库统一提供，这里只做存在性检查
+    if [ ! -f "$TMUX_CONF" ]; then
+        print_warning "未找到 $TMUX_CONF"
+        print_warning "请先应用 dotfiles: chezmoi init --apply <dotfiles-repo>"
+        print_warning "（init.sh 的 setup_dotfiles 步骤会自动完成此操作）"
+        return 1
     fi
 
-    # 复制或下载配置文件
-    if [ -f "$source_config" ]; then
-        print_info "从本地复制配置文件"
-        cp "$source_config" "$TMUX_CONF"
-    else
-        print_info "从远程下载配置文件"
-        if command -v curl &>/dev/null; then
-            curl -fsSL "$REPO_URL/tmux/.tmux.conf" -o "$TMUX_CONF"
-        elif command -v wget &>/dev/null; then
-            wget -qO "$TMUX_CONF" "$REPO_URL/tmux/.tmux.conf"
-        else
-            print_error "未找到 curl 或 wget，无法下载配置文件"
-            exit 1
-        fi
-
-        if [ $? -ne 0 ]; then
-            print_error "配置文件下载失败，请检查网络或 URL"
-            exit 1
-        fi
-    fi
-
-    print_success "tmux 配置文件设置完成: $TMUX_CONF"
+    print_success "tmux 配置文件已就绪: $TMUX_CONF"
 }
 
 # =============================================================================

@@ -65,13 +65,12 @@ bash <(curl -fsSL https://raw.githubusercontent.com/cheny-00/local_config/main/i
 - ✅ **压缩工具**: zip, gzip, bzip2, xz-utils
 - ✅ **开发工具**: build-essential
 
-#### 📁 配置文件
-- ✅ `~/.vimrc` - vim 完整配置
-- ✅ `~/.vim/` - vim 插件和临时文件目录
-- ✅ `~/.zshrc` - zsh 主配置
-- ✅ `~/.common_alias.zsh` - 通用别名
-- ✅ `~/.func.zsh` - 自定义函数
-- ✅ `~/.config/starship.toml` - starship 配置
+#### 📁 配置文件（由 chezmoi dotfiles 仓库统一提供）
+- ✅ `~/.zshrc` / `~/.alias.zsh` / `~/.func.zsh` / `~/.vimrc` / `~/.tmux.conf` 等
+  由 [chezmoi](https://www.chezmoi.io/) 从 dotfiles 仓库拉取（`init.sh` 自动完成，
+  私有仓库用 `--dotfiles 'https://<token>@github.com/cheny-00/dotfiles.git'`）
+- ✅ `~/.vim/` - vim 插件和临时文件目录（本仓库引导）
+- ✅ `~/.config/starship.toml` - starship 配置（本仓库生成）
 
 #### 🎨 Vim 特性
 - 主题：PaperColor, Tokyo Night, Gruvbox, Molokai, Catppuccin 等
@@ -99,10 +98,8 @@ bash <(curl -fsSL https://raw.githubusercontent.com/cheny-00/local_config/main/i
 - **trzsz**: 支持 tmux 的文件传输工具 (类似 rz/sz)
 
 ### 配置文件
-- `~/.zshrc`: zsh 主配置
-- `~/.common_alias.zsh`: 通用别名
-- `~/.func.zsh`: 自定义函数
-- `~/.config/starship.toml`: starship 配置
+- `~/.zshrc` / `~/.alias.zsh` / `~/.func.zsh` 等: 来自 chezmoi dotfiles 仓库
+- `~/.config/starship.toml`: starship 配置（本仓库生成）
 
 ## 使用示例
 
@@ -158,14 +155,10 @@ Ctrl+R      # 搜索历史命令
 ```
 local_config/
 ├── init.sh                      # 🚀 一键安装脚本
-├── .vimrc                       # vim 配置文件
-├── .zsh/                        # zsh 配置目录
-│   ├── .zshrc                  # zsh 主配置
-│   ├── .common_alias.zsh       # 通用别名
-│   └── .func.zsh               # 自定义函数
-├── tmux/                        # tmux 配置目录
-│   ├── tmux_setup.sh           # tmux 安装脚本
-│   └── .tmux.conf              # tmux 配置文件
+├── tmux/
+│   └── tmux_setup.sh           # tmux 安装脚本（配置来自 chezmoi）
+├── ssh/
+│   └── ssh_security.sh         # SSH 安全加固
 ├── fail2ban/                    # fail2ban 配置
 │   ├── jail.local
 │   └── action.d/
@@ -173,6 +166,9 @@ local_config/
 └── misc/
     ├── realm.sh                # Realm 转发工具
     └── install_tssh_trzsz.sh   # tssh 和 trzsz 安装脚本
+
+配置文件（.zshrc/.vimrc/.tmux.conf 等）不再存放于本仓库，
+统一由 chezmoi dotfiles 仓库管理: github.com/cheny-00/dotfiles
 ```
 
 ### 安装后的用户目录结构
@@ -189,9 +185,9 @@ local_config/
 │       ├── undo/              # undo 历史
 │       ├── swap/              # swap 文件
 │       └── info/              # viminfo
-├── .zshrc                      # zsh 配置
-├── .common_alias.zsh           # 别名
-├── .func.zsh                   # 函数
+├── .zshrc                      # zsh 配置（chezmoi）
+├── .alias.zsh                  # 别名（chezmoi）
+├── .func.zsh                   # 函数（chezmoi）
 ├── .config/
 │   └── starship.toml          # starship 配置
 ├── .fzf/                      # fzf 安装目录
@@ -285,11 +281,10 @@ mkdir -p ~/.vim/{autoload,plugged}
 # 7. 配置 starship 主题
 starship preset nerd-font-symbols -o ~/.config/starship.toml
 
-# 8. 下载配置文件
-wget -O ~/.vimrc https://raw.githubusercontent.com/cheny-00/local_config/main/.vimrc
-wget -O ~/.zshrc https://raw.githubusercontent.com/cheny-00/local_config/main/.zsh/.zshrc
-wget -O ~/.common_alias.zsh https://raw.githubusercontent.com/cheny-00/local_config/main/.zsh/.common_alias.zsh
-wget -O ~/.func.zsh https://raw.githubusercontent.com/cheny-00/local_config/main/.zsh/.func.zsh
+# 8. 用 chezmoi 拉取配置文件（.zshrc/.vimrc/.tmux.conf 等）
+sh -c "$(curl -fsLS get.chezmoi.io)" -- -b ~/.local/bin
+~/.local/bin/chezmoi init --apply https://github.com/cheny-00/dotfiles.git
+# 私有仓库: chezmoi init --apply 'https://<只读token>@github.com/cheny-00/dotfiles.git'
 
 # 9. 安装 vim-plug
 curl -fLo ~/.vim/autoload/plug.vim --create-dirs \
