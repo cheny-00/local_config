@@ -37,16 +37,14 @@ NC='\033[0m'
 USERNAME=""
 USER_HOME=""
 REPO_URL="https://raw.githubusercontent.com/cheny-00/local_config/main"
-# dotfiles 统一由 chezmoi 仓库提供（本仓库只负责装工具/引导）
-# 私有仓库在非交互环境需要带凭证的 URL，见 --dotfiles 说明
-DOTFILES_REPO="https://github.com/cheny-00/dotfiles.git"
+# config/ 下的配置文件是生成物，源头是私有 chezmoi dotfiles 仓库
+# （Mac 上运行其 .scripts/sync-server-configs.sh 更新），这里直接裸链下载
 
 # 命令行参数变量
 ARG_USERNAME=""
 ARG_HOSTNAME=""
 ARG_SETUP_SSH="n"
 ARG_SETUP_TMUX="n"
-ARG_DOTFILES=""
 
 # =============================================================================
 # 辅助函数
@@ -91,8 +89,6 @@ ${NC}
   -h, --hostname NAME 指定主机名（默认不修改）
   -k, --ssh-key       配置 SSH 安全
   -t, --tmux          配置 tmux
-  -d, --dotfiles URL  dotfiles 仓库地址（默认 $DOTFILES_REPO）
-                      私有仓库用 https://<token>@github.com/... 形式
 
 功能:
   - 自动检测/创建用户
@@ -147,10 +143,6 @@ parse_arguments() {
             -t|--tmux)
                 ARG_SETUP_TMUX="y"
                 shift
-                ;;
-            -d|--dotfiles)
-                ARG_DOTFILES="$2"
-                shift 2
                 ;;
             *)
                 print_error "未知选项: $1"
@@ -531,41 +523,45 @@ configure_starship() {
     print_success "starship 配置完成: $starship_config"
 }
 
-# 通过 chezmoi 拉取 dotfiles（.zshrc/.vimrc/.tmux.conf 等统一来源）
-setup_dotfiles() {
-    print_step "配置 dotfiles (chezmoi)"
+# 下载 zsh 配置文件（config/ 由私有 chezmoi 仓库生成，通用别名已内联在 .zshrc）
+setup_zsh_config() {
+    print_step "配置 zsh"
 
-    local repo="${ARG_DOTFILES:-$DOTFILES_REPO}"
-    local chezmoi_bin="$USER_HOME/.local/bin/chezmoi"
+    # 下载 .zshrc
+    print_info "下载 .zshrc"
+    wget -q -O "$USER_HOME/.zshrc" "$REPO_URL/config/.zshrc" || {
+        print_error "下载 .zshrc 失败"
+        return 1
+    }
 
-    # 安装 chezmoi 到目标用户的 ~/.local/bin
-    if [ ! -x "$chezmoi_bin" ]; then
-        print_info "安装 chezmoi"
-        sudo -u "$USERNAME" sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "$USER_HOME/.local/bin" || {
-            print_error "chezmoi 安装失败"
-            return 1
-        }
-    fi
+    # 下载 .func.zsh
+    print_info "下载 .func.zsh"
+    wget -q -O "$USER_HOME/.func.zsh" "$REPO_URL/config/.func.zsh" || {
+        print_warning "下载 .func.zsh 失败，跳过"
+    }
 
-    # 初始化并应用配置
-    print_info "chezmoi init --apply $repo"
-    if ! sudo -u "$USERNAME" "$chezmoi_bin" init --apply "$repo"; then
-        print_warning "chezmoi init 失败。私有仓库需要凭证，例如:"
-        print_warning "  --dotfiles 'https://<只读token>@github.com/cheny-00/dotfiles.git'"
-        print_warning "稍后可手动执行: chezmoi init --apply <repo>"
-        return 0
-    fi
-
-    # .zshrc 依赖的目录
+    # 创建必要的目录
     mkdir -p "$USER_HOME/.cache/zsh" "$USER_HOME/.zinit"
+
+    # 设置文件所有者
+    chown "$USERNAME:$USERNAME" "$USER_HOME/.zshrc"
+    [ -f "$USER_HOME/.func.zsh" ] && chown "$USERNAME:$USERNAME" "$USER_HOME/.func.zsh"
     chown -R "$USERNAME:$USERNAME" "$USER_HOME/.cache" "$USER_HOME/.zinit"
 
-    print_success "dotfiles 应用完成"
+    print_success "zsh 配置完成"
 }
 
-# 配置 vim（.vimrc 来自 chezmoi，这里只做插件引导）
+# 配置 vim
 setup_vim_config() {
     print_step "配置 vim"
+
+    # 下载 .vimrc
+    print_info "下载 .vimrc"
+    wget -q -O "$USER_HOME/.vimrc" "$REPO_URL/config/.vimrc" || {
+        print_error "下载 .vimrc 失败"
+        return 1
+    }
+    chown "$USERNAME:$USERNAME" "$USER_HOME/.vimrc"
 
     # 创建 vim 目录结构
     print_info "创建 vim 目录结构"
@@ -653,13 +649,13 @@ EOF
     # 配置 starship
     configure_starship
 
-    # 拉取 dotfiles（zsh/vim/tmux 配置）
-    setup_dotfiles
+    # 配置 zsh
+    setup_zsh_config
 
-    # 配置 vim 插件
+    # 配置 vim
     setup_vim_config
 
-    # 配置 tmux (可选，需在 dotfiles 应用之后，.tmux.conf 来自 chezmoi)
+    # 配置 tmux (可选)
     local setup_tmux_choice="$ARG_SETUP_TMUX"
     if [ "$setup_tmux_choice" != "y" ]; then
         if [ -t 0 ]; then
