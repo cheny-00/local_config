@@ -96,6 +96,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/cheny-00/local_config/main/i
 - **eza**: 带图标的 ls 替代品
 - **fzf**: 模糊搜索工具
 - **zoxide**: 智能目录跳转 (z 命令)
+- **dust**: 看磁盘被谁占了，一屏树状显示最大的目录 (du 的替代品)
 - **tssh**: 增强的 SSH 客户端，支持更多特性
 - **trzsz**: 支持 tmux 的文件传输工具 (类似 rz/sz)
 

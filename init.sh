@@ -444,6 +444,48 @@ install_zoxide() {
     print_success "zoxide 安装完成"
 }
 
+# 安装 dust（du 的替代品：一屏树状显示哪些目录最占空间）
+install_dust() {
+    print_step "安装 dust"
+
+    if command -v dust &>/dev/null; then
+        print_warning "dust 已安装，跳过"
+        return
+    fi
+
+    case "$OS" in
+        ubuntu|debian)
+            # Debian 13+ 等新发行版官方源里有（包名 du-dust，命令 /usr/bin/dust）；
+            # 源里没有的（如 Debian 12）装 GitHub Releases 的 musl 静态版到 /usr/local/bin
+            if apt-cache show du-dust &>/dev/null; then
+                apt install -y du-dust
+            else
+                local arch ver name
+                case "$(uname -m)" in
+                    x86_64) arch=x86_64 ;;
+                    aarch64|arm64) arch=aarch64 ;;
+                    *) print_warning "暂不支持 $(uname -m) 架构自动安装 dust，跳过"; return ;;
+                esac
+                ver=$(curl -sSfL https://api.github.com/repos/bootandy/dust/releases/latest | grep -oE '"tag_name": *"[^"]+"' | cut -d'"' -f4)
+                if [ -z "$ver" ]; then
+                    print_warning "获取 dust 最新版本失败，跳过"
+                    return
+                fi
+                name="dust-${ver}-${arch}-unknown-linux-musl"
+                curl -sSfL "https://github.com/bootandy/dust/releases/download/${ver}/${name}.tar.gz" | tar -xz -C /tmp
+                install -m 755 "/tmp/${name}/dust" /usr/local/bin/dust
+                rm -rf "/tmp/${name}"
+            fi
+            ;;
+        *)
+            print_warning "暂不支持在 $OS 上自动安装 dust"
+            return
+            ;;
+    esac
+
+    print_success "dust 安装完成"
+}
+
 # 安装 starship
 install_starship() {
     print_step "安装 starship"
@@ -640,6 +682,7 @@ EOF
     install_eza
     install_fzf
     install_zoxide
+    install_dust
     install_starship
     install_tssh_trzsz
 
